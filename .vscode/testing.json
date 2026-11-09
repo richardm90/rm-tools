@@ -6,9 +6,6 @@
             "rpgPpOpt": "*LVL2",
             "cOption": [
                 "*EVENTF"
-            ],
-            "incDir": [
-                "."
             ]
         },
         "rucalltst": {
