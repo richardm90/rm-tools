@@ -1,0 +1,39 @@
+**FREE
+
+//========================================================================
+// Program status data structure (PSDS copy book)
+//========================================================================
+
+dcl-ds psds psds qualified;
+  program        *proc;               //* Procedure name
+  status         *status;             //* Status code
+  PRV_STATUS     zoned(5:0) pos(16);  //* Previous status
+  LINE_NUM       char(8)    pos(21);  //* Src list line num
+  routine        *routine;            //* Routine name
+  PARMS          *parms;              //* Num passed parms
+  excp_msgid     char(7)    pos(40);  //* Exception type+num
+  EXCP_TYPE      char(3)    pos(40);  //* Exception type
+  EXCP_NUM       char(4)    pos(43);  //* Exception number
+  PGM_LIB        char(10)   pos(81);  //* Program library
+  excp_data      char(80)   pos(91);  //* Exception data
+  EXCP_ID        char(4)    pos(171); //* Exception Id
+  DATE           char(8)    pos(191); //* Date (*DATE fmt)
+  YEAR           zoned(2:0) pos(199); //* Year (*YEAR fmt)
+  LAST_FILE      char(8)    pos(201); //* Last file used
+  FILE_INFO      char(35)   pos(209); //* File error info
+  job_name       char(10)   pos(244); //* Job name
+  job_user       char(10)   pos(254); //* Job user
+  job_number     zoned(6:0) pos(264); //* Job number
+  JOB_DATE       zoned(6:0) pos(270); //* Date (UDATE fmt)
+  RUN_DATE       zoned(6:0) pos(276); //* Run date (UDATE)
+  RUN_TIME       zoned(6:0) pos(282); //* Run time (UDATE)
+  CRT_DATE       char(6)    pos(288); //* Create date
+  CRT_TIME       char(6)    pos(294); //* Create time
+  CPL_LEVEL      char(4)    pos(300); //* Compiler level
+  SRC_FILE       char(10)   pos(304); //* Source file
+  SRC_LIB        char(10)   pos(314); //* Source file lib
+  SRC_MBR        char(10)   pos(324); //* Source file mbr
+  PROC_PGM       char(10)   pos(334); //* Pgm Proc is in
+  PROC_MOD       char(10)   pos(344); //* Mod Proc is in
+  current_user   char(10)   pos(358); //* Current user
+end-ds;

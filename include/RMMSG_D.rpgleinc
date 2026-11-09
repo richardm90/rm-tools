@@ -1,0 +1,231 @@
+**FREE
+
+/if defined(RMMSG_D)
+/eof
+/endif
+/define RMMSG_D
+
+//==============================================================================
+// RMMSG_D    - Message Helper Copybook
+//
+// 19/11/2023 - RM - created
+//==============================================================================
+
+///
+// Definition copybooks
+///
+
+/define IBM_API_DEFINITIONS
+/include 'include/RMTOOLS_D.rpgleinc'
+
+///
+// Constants definitions
+///
+
+// Message types
+dcl-c MSG_TYPE_COMP                   '*COMP';
+dcl-c MSG_TYPE_DIAG                   '*DIAG';
+dcl-c MSG_TYPE_ESCAPE                 '*ESCAPE';
+dcl-c MSG_TYPE_INFO                   '*INFO';
+dcl-c MSG_TYPE_INQ                    '*INQ';
+dcl-c MSG_TYPE_NOTIFY                 '*NOTIFY';
+dcl-c MSG_TYPE_RQS                    '*RQS';
+dcl-c MSG_TYPE_STATUS                 '*STATUS';
+
+// Receive message actions
+dcl-c MSG_ACTION_OLD                  '*OLD';
+dcl-c MSG_ACTION_REMOVE               '*REMOVE';
+dcl-c MSG_ACTION_SAME                 '*SAME';
+
+// Call stack entry values
+dcl-c MSG_CSE_CURRENT                 '*';
+dcl-c MSG_CSE_CTLBDY                  '*CTLBDY';
+dcl-c MSG_CSE_EXT                     '*EXT';
+dcl-c MSG_CSE_PGMBDY                  '*PGMBDY';
+dcl-c MSG_CSE_PGMNAME                 '*PGMNAME';
+
+// Message data size
+dcl-c MSG_MSG_DATA_SIZE             const(5000);
+
+///
+// Template field definitions
+///
+
+dcl-s MSG_ACTION_t                    char(10)      template;
+dcl-s MSG_CALL_STACK_ENTRY_t          char(19)      template;
+dcl-s MSG_MSGID_t                     char(7)       template;
+dcl-s MSG_MSG_DATA_t                  varchar(MSG_MSG_DATA_SIZE) template;
+dcl-s MSG_MSG_KEY_t                   char(4)       template;
+dcl-s MSG_MSG_TYPE_t                  char(10)      template;
+dcl-s MSG_RCV_MSG_TYPE_t              char(2)       template;
+dcl-s MSG_TEXT_t                      varchar(512)  template;
+dcl-s MSG_HELP_TEXT_t                 varchar(2048) template;
+dcl-s MSG_PROC_NAME_t                 varchar(256)  template;
+dcl-s MSG_STATEMENT_t                 varchar(30)   template;
+
+dcl-ds MSG_MESSAGE_t qualified template inz;
+  severity      like(INTEGER_t)           inz(0);
+  msgid         like(MSG_MSGID_t)         inz('');
+  msg_key       like(MSG_MSG_KEY_t)       inz(x'00000000');
+  msg_type      like(MSG_MSG_TYPE_t)      inz('');
+  rcv_msg_type  like(MSG_RCV_MSG_TYPE_t)  inz('');
+  msg_file      like(OBJ_NAME_t)          inz('');
+  msg_file_lib  like(OBJ_NAME_t)          inz('');
+  text          like(MSG_TEXT_t)          inz('');
+  help_text     like(MSG_HELP_TEXT_t)     inz('');
+  program       like(OBJ_NAME_t)          inz('');
+  module        like(OBJ_NAME_t)          inz('');
+  procedure     like(MSG_PROC_NAME_t)     inz('');
+  statement     like(MSG_STATEMENT_t)     inz('');
+end-ds;
+
+///
+// Catch a program message.
+//
+// A helper method over the QMHRCVPM API.
+//
+// @param Returned received message structure.
+// @param Optional message action, defaults to *REMOVE.
+// @return Boolean indicating a message was received.
+///
+
+dcl-pr catch like(BOOLEAN_t);
+  msg likeds(MSG_MESSAGE_t);
+  msg_action_in like(MSG_ACTION_t) const options(*nopass);
+end-pr;
+
+///
+// Throw a previously received message.
+//
+// A helper method over the QMHSNDPM API.
+//
+// @param received message structure
+// @param optional, call stack entry e.g. '*CTLBDY', defaults to '*'
+// @param optional, returned message key
+///
+
+dcl-pr rethrow;
+  msg likeds(MSG_MESSAGE_t) const options(*exact);
+  call_stack_entry like(MSG_CALL_STACK_ENTRY_t) const options(*nopass);
+  msg_key like(MSG_MSG_KEY_t) options(*nopass);
+end-pr;
+
+///
+// Throw a new message.
+//
+// A helper method over the QMHSNDPM API.
+//
+// @param message text
+// @param optional, call stack entry e.g. '*CTLBDY', defaults to '*'
+///
+
+dcl-pr throw;
+  text like(MSG_TEXT_t) const;
+  call_stack_entry like(MSG_CALL_STACK_ENTRY_t) const options(*nopass);
+end-pr;
+
+///
+// Send a program message.
+//
+// A helper method over the QMHSNDPM API.
+//
+// @param optional, message data/text
+// @param optional, call stack entry e.g. '*CTLBDY', defaults to '*'
+// @param optional, message type e.g. '*ESCAPE', defaults to '*INFO'
+// @param optional, message id e.g. 'CPF9897', defaults to blank
+// @param optional, message file e.g. 'QCPFMSG', defaults to blank
+// @param optional, message file library e.g. 'QSYS', defaults to blank
+// @param optional, returned message key
+///
+
+dcl-pr sndmsg;
+  msg_data         like(MSG_MSG_DATA_t)         const options(*omit: *nopass);
+  call_stack_entry like(MSG_CALL_STACK_ENTRY_t) const options(*omit: *nopass);
+  msg_type         like(MSG_MSG_TYPE_t)         const options(*omit: *nopass);
+  msg_id           like(MSG_MSGID_t)            const options(*omit: *nopass);
+  msg_file         like(OBJ_NAME_t)             const options(*omit: *nopass);
+  msg_file_lib     like(OBJ_NAME_t)             const options(*omit: *nopass);
+  msg_key          like(MSG_MSG_KEY_t)          options(*nopass);
+end-pr;
+
+///
+// Dump the received message fields to the job log.
+//
+// Useful for debugging.
+// Each field in the received message is output as a separate
+// information message in the job log.
+//
+// @param received message structure
+///
+
+dcl-pr MSG_dump;
+  msg likeds(MSG_MESSAGE_t) const;
+end-pr;
+
+///
+// Receive job log message.
+//
+// @param the returned message details
+// @param optional, retrieve the next message, defaults to previous
+// @param optional, retrieve the first message, defaults to the next
+// @param optional, message action, defaults to *SAME
+///
+
+dcl-pr rcv_jlmsg like(BOOLEAN_t);
+  msg likeds(MSG_MESSAGE_t);
+  dir_next like(BOOLEAN_t)  const options(*omit: *nopass);
+  first_msg like(BOOLEAN_t) const options(*nopass);
+  msg_action like(MSG_ACTION_t) const options(*nopass);
+end-pr;
+
+///
+// Receive the previous job log message.
+//
+// @param The returned message details, populate the 'msg_key' field with
+//          the message key value from which the previous is based. If the
+//          'msg_key' field is set to x'00000000' then the last job log message
+//          is returned.
+// @return Boolean, set true if a message was received.
+///
+
+dcl-pr rcv_prvjlmsg like(BOOLEAN_t);
+  msg likeds(MSG_MESSAGE_t);
+end-pr;
+
+///
+// Receive the next job log message.
+//
+// @param The returned message details, populate the 'msg_key' field with
+//          the message key value from which the next is based. If the 'msg_key'
+//          field is set to x'00000000' then the first job log message is
+//          returned.
+// @return Boolean, set true if a message was received.
+///
+
+dcl-pr rcv_nxtjlmsg like(BOOLEAN_t);
+  msg likeds(MSG_MESSAGE_t);
+end-pr;
+
+///
+// Return the last job log message key.
+//
+// @param The returned message key.
+// @return Boolean, set true if a message was received.
+///
+
+dcl-pr get_last_jl_msg_key like(BOOLEAN_t);
+  msg_key like(MSG_MSG_KEY_t);
+end-pr;
+
+///
+// Remove a program message.
+//
+// A helper method over the QMHRMVPM API.
+//
+// @param the message to remove
+// @return boolean value indicating the message was removed
+///
+
+dcl-pr rmvmsg like(BOOLEAN_t);
+  msg likeds(MSG_MESSAGE_t) const;
+end-pr;

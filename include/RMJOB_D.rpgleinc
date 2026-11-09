@@ -1,0 +1,77 @@
+**FREE
+
+//==============================================================================
+// RMJOB_D.rpgleinc
+//   JOB helper copybook
+//==============================================================================
+
+/if defined(RMJOB_D)
+/eof
+/endif
+/define RMJOB_D
+
+///
+// Include copybooks
+///
+
+/include 'include/RMTOOLS_D.rpgleinc'
+
+//==============================================================================
+// Define global prototypes
+//==============================================================================
+
+dcl-pr JOB_ccsid like(CCSID_t) end-pr;
+
+dcl-pr JOB_name like(JOB_NAME_t) end-pr;
+
+dcl-pr JOB_user like(USER_t) end-pr;
+
+dcl-pr JOB_number like(JOB_NUMBER_t) end-pr;
+
+dcl-pr JOB_full_job_name like(JOB_FULL_NAME_t) end-pr;
+
+dcl-pr JOB_extract_user like(USER_t);
+  full_job_name like(JOB_FULL_NAME_t) const;
+end-pr;
+
+///
+// Matches rm-sc's own SCLAUNCH_MAX_ENV/SCDEF_ENVVAR_t shape (QPROTOSRC/
+// SCLAUNCH_D.RPGLEINC, SCDEF_D.RPGLEINC) in spirit, but deliberately a
+// SEPARATE type from RMFORK_D.rpgleinc's FORK_ENVVAR_t - that one is "what
+// you publish", this one is "what you read back", matching rm-sc's own
+// precedent of two distinct types for those two directions. RMJOB must not
+// depend on RMFORK_D.rpgleinc (wrong direction - RMJOB is the lower-level,
+// general-purpose module).
+///
+
+dcl-c JOB_MAX_ENVVARS const(48);
+
+dcl-s JOB_ENVVAR_t varchar(512) template;
+
+dcl-ds JOB_ENVVARS_t qualified template;
+  count like(UNSIGNED_INTEGER_t) inz(0);
+  entry like(JOB_ENVVAR_t) dim(JOB_MAX_ENVVARS);
+end-ds;
+
+///
+// Read a job's LIVE environment variables by scraping
+// DSPJOB JOB(job_name) OPTION(*ENVVAR) OUTPUT(*PRINT) - there is no QSYS2
+// service that exposes this (QSYS2.ENVIRONMENT_VARIABLE_INFO has no
+// JOB_NAME column), so this is the only route. Ported from rm-sc's
+// SCQRY_job_envvars (QRPGLESRC/SCQRY.SQLRPGLE) rather than re-derived, to
+// keep its measured edge-case fixes (multi-page reports, inconsistent line
+// endings, spooled-file ownership, forced HOLD). It lives here as a real,
+// reusable rm-tools capability rather than test-only support code.
+//
+// @param the job to read, as number/user/name (like JOB_full_job_name's
+//          own return shape - pass that directly for the current job)
+// @param the job's environment variables, cleared and repopulated
+// @param a reason, populated only when this returns false
+// @return true if the job's environment variables were read successfully
+///
+
+dcl-pr JOB_get_envvars like(BOOLEAN_t);
+  job_name like(JOB_FULL_NAME_t) const;
+  env      likeds(JOB_ENVVARS_t);
+  err      like(STRING_t);
+end-pr;

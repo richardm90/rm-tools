@@ -1,0 +1,7 @@
+.env
+
+# TOBi build output
+.evfevent/
+.logs/
+.trace-makei
+.deps/

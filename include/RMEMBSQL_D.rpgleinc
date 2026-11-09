@@ -1,0 +1,80 @@
+**free
+
+/if defined(RMEMBSQL_D)
+/eof
+/endif
+/define RMEMBSQL_D
+
+//==============================================================================
+// RMEMBSQL_D - Embedded SQL RPG Helper Copybook
+//
+// 30/10/2021 - RM - created
+//==============================================================================
+
+///
+// Include copybooks
+///
+
+/include 'include/RMTOOLS_D.rpgleinc'
+
+///
+// Declare data structure
+///
+
+dcl-ds EMBSQL_state_t qualified template inz;
+  set like(BOOLEAN_t) inz(false);
+  sqlstate like(EMBSQL_sqlstate_t) inz('00000');
+  sqlcode like(EMBSQL_sqlcode_t) inz(0);
+  msg like(EMBSQL_msg_t) inz('');
+  error like(BOOLEAN_t) inz(false);
+  diag like(BOOLEAN_t) inz(false);
+  found like(BOOLEAN_t) inz(false);
+end-ds;
+
+///
+// Declare field templates
+///
+
+dcl-s EMBSQL_msg_t varchar(32740) template;
+dcl-s EMBSQL_sqlstate_t char(5) template;
+dcl-s EMBSQL_sqlcode_t int(10) template;
+
+///
+// Declare named constants
+///
+
+// SQLSTATE values
+dcl-c EMBSQL_SQLSTATE_OBJECT_NOT_FOUND '42704';
+
+// SQLCODE values
+dcl-c EMBSQL_SQLCODE_OK 0;
+
+///
+// Declare prototypes
+///
+
+dcl-pr EMBSQL_inz end-pr;
+
+dcl-pr EMBSQL_state likeds(EMBSQL_state_t) end-pr;
+
+dcl-pr EMBSQL_error like(BOOLEAN_t);
+  p_state likeds(EMBSQL_state_t) const options(*nopass);
+end-pr;
+
+dcl-pr EMBSQL_found like(BOOLEAN_t);
+  p_state likeds(EMBSQL_state_t) options(*nopass);
+end-pr;
+
+dcl-pr EMBSQL_msg like(EMBSQL_msg_t);
+  p_state likeds(EMBSQL_state_t) options(*nopass);
+end-pr;
+
+dcl-pr EMBSQL_sqlstate like(EMBSQL_sqlstate_t);
+  p_state likeds(EMBSQL_state_t) options(*nopass);
+end-pr;
+
+dcl-pr EMBSQL_sqlcode like(EMBSQL_sqlcode_t);
+  p_state likeds(EMBSQL_state_t) options(*nopass);
+end-pr;
+
+dcl-pr EMBSQL_check likeds(EMBSQL_state_t) end-pr;

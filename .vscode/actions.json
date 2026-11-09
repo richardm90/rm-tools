@@ -1,0 +1,20 @@
+[
+  {
+    "name": "1) TOBi - build all 🔨",
+    "command": "/QOpenSys/pkgs/bin/makei build",
+    "extensions": [
+      "GLOBAL"
+    ],
+    "environment": "pase",
+    "deployFirst": true
+  },
+  {
+    "name": "2) TOBi - build current 🔨",
+    "command": "/QOpenSys/pkgs/bin/makei c -f &RELATIVEPATH",
+    "environment": "pase",
+    "deployFirst": true,
+    "extensions": [
+      "GLOBAL"
+    ]
+  }
+]

@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "description": "rm-tools: RPGLE helper modules for IBM i",
+  "objlib": "&OBJLIB",
+  "curlib": "&OBJLIB",
+  "includePath": ["."],
+  "postUsrlibl": ["QGPL","QTEMP"],
+  "setIBMiEnvCmd": [],
+  "buildCommand": "/QOpenSys/pkgs/bin/makei build",
+  "compileCommand": "/QOpenSys/pkgs/bin/makei c -f {filename}"
+}

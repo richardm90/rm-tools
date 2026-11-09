@@ -1,0 +1,201 @@
+**free
+
+/if defined(RMSTRING_D)
+/eof
+/endif
+/define RMSTRING_D
+
+//==============================================================================
+// RMSTRING_D - String Helper Copybook
+//
+// 11/11/2024 - RM - created
+// 11/01/2025 - RM - added hex prototypes
+// 11/01/2025 - RM - added string builder definitions
+//==============================================================================
+
+/include 'include/RMTOOLS_D.rpgleinc'
+
+dcl-pr STRING_number_to_string like(STRING_t);
+  number packed(3:0) const;
+end-pr;
+
+dcl-pr STRING_day_to_string char(4);
+  days packed(2:0) const;
+end-pr;
+
+dcl-pr STRING_words like(INTEGER_t);
+  str like(STRING_t) const;
+end-pr;
+
+dcl-pr STRING_replace like(STRING_t);
+  p_string                  like(STRING_t) const;
+  p_find                    like(STRING_t) const;
+  p_replace                 like(STRING_t) const;
+end-pr;
+
+dcl-pr STRING_upper like(STRING_t);
+  str like(STRING_t) const;
+end-pr;
+
+dcl-pr STRING_lower like(STRING_t);
+  str like(STRING_t) const;
+end-pr;
+
+///
+// Convert a string encoded in the job CCSID to UTF-8.
+//
+// @param String to convert, in the job CCSID.
+// @return String encoded in UTF-8.
+///
+
+dcl-pr STRING_utf8 like(STRING_t) ccsid(*utf8);
+  str_job_ccsid like(STRING_t) const;
+end-pr;
+
+///
+// Convert a hex value to a string of hex characters.
+//
+// @param Pointer to the hex data.
+// @param Length of the hex data to convert to a string.
+// @param Format hex string for output, defaults to true
+// @return hex value as a character string
+///
+
+dcl-pr STRING_hex like(STRING_t);
+  hex_value pointer value;
+  hex_len like(UNSIGNED_INTEGER_t) const;
+  format like(BOOLEAN_t) const options(*nopass);
+end-pr;
+
+///
+// Convert a pointer address to a string of hex characters.
+//
+// @param The pointer to convert.
+// @return hex value as a character string
+///
+
+dcl-pr STRING_ptr_to_hex like(STRING_t);
+  ptr_in pointer value;
+  format_in like(BOOLEAN_t) const options(*nopass);
+end-pr;
+
+//==============================================================================
+// RMSTRING02 - String Helper - Builder Module
+//==============================================================================
+
+///
+// String builder definitions
+///
+
+dcl-s STRING_sb_t pointer template;
+
+///
+// Initializes a string builder structure.
+//
+// Overload prototype.
+///
+
+dcl-pr STRING_sb_new like(BOOLEAN_t)
+  overload( STRING_sb_new_empty
+          : STRING_sb_new_string );
+
+///
+// Initializes a string builder instance.
+//
+// @param The returned pointer to the string builder instance.
+// @return Boolean value indicating success.
+///
+
+dcl-pr STRING_sb_new_empty like(BOOLEAN_t);
+  sb like(STRING_sb_t) options(*exact);
+end-pr;
+
+///
+// Initializes a string builder instance using the specified string.
+//
+// @param The returned pointer to the string builder instance.
+// @param The UTF-8 encoded string to initialize the string builder instance.
+// @return Boolean value indicating success.
+///
+
+dcl-pr STRING_sb_new_string like(BOOLEAN_t);
+  sb like(STRING_sb_t) options(*exact);
+  str like(STRING_t) ccsid(*utf8) const;
+end-pr;
+
+///
+// Get the length of the string builder instance data.
+//
+// @param Pointer to the string builder instance.
+// @return The length of the string builder instance data.
+///
+
+dcl-pr STRING_sb_length like(UNSIGNED_INTEGER_t);
+  sb like(STRING_sb_t) options(*exact) value;
+end-pr;
+
+///
+// Appends the specified string to the string builder instance.
+//
+// @param Pointer to the string builder instance.
+// @param The UTF-8 encoded string to append to the string builder instance.
+// @return Boolean value indicating success.
+///
+
+dcl-pr STRING_sb_append like(BOOLEAN_t);
+  sb like(STRING_sb_t) options(*exact) value;
+  str like(STRING_t) ccsid(*utf8) const;
+end-pr;
+
+///
+// Get the string element that was appended to the string builder instance.
+//
+// @param Pointer to the string builder instance.
+// @param The returned UTF-8 encoded string element.
+// @param Optional, index of the element that was appended, defaults to 1.
+// @return Boolean value indicating success.
+///
+
+dcl-pr STRING_sb_get like(BOOLEAN_t);
+  sb like(STRING_sb_t) options(*exact) value;
+  str like(STRING_t) ccsid(*utf8);
+  get_index like(UNSIGNED_INTEGER_t) const options(*nopass);
+end-pr;
+
+///
+// Delete a string builder instance.
+//
+// This frees the memory allocated to the string builder instance.
+//
+// @param Pointer to the string builder instance to delete, the pointer will
+//          be returned with a *NULL value.
+// @return Boolean value indicating success.
+///
+
+dcl-pr STRING_sb_delete like(BOOLEAN_t);
+  sb like(STRING_sb_t) options(*exact);
+end-pr;
+
+///
+// Return the string builder instance data as a string.
+//
+// The string parts will be separated using the specified separater, if this
+// is omitted then LF (x'0A') will be assumed.
+//
+// The returned string has a maximum length (MAX_STRING_LEN), if this length
+// would be exceeded by the content of the instance data then a truncated
+// string value will be returned and the returned value (success boolean) will
+// be false.
+//
+// @param Pointer to the string builder instance to delete, the pointer will
+//          be returned with a *NULL value.
+// @param The returned string.
+// @param Optional string part seperator, defaults to CRLF.
+// @return Boolean value indicating success.
+///
+
+dcl-pr STRING_sb_to_string like(BOOLEAN_t);
+  sb like(STRING_sb_t) options(*exact) value;
+  str like(STRING_t) ccsid(*utf8);
+  sep_in varchar(10) ccsid(*utf8) const options(*nopass);
+end-pr;

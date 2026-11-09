@@ -1,0 +1,277 @@
+**free
+
+/if defined(RMAPP_D)
+/eof
+/endif
+/define RMAPP_D
+
+//==============================================================================
+// RMAPP_D    - Application Helper Copybook
+//
+// 30/10/2024 - RM - created
+//==============================================================================
+
+///
+// Include copybooks
+///
+
+/include 'include/RMTOOLS_D.rpgleinc'
+
+///
+// Logger message types
+///
+
+// Simply log an information message (default)
+dcl-c APP_LOG_INFO                   const(1);
+// Log an escape message
+dcl-c APP_LOG_ESCAPE                 const(2);
+
+///
+// Logger message text
+///
+
+dcl-s APP_MESSAGE_TEXT_t             varchar(512) template;
+
+///
+// DAL defaults
+///
+
+dcl-c APP_DEFAULT_PAGE_ROWS 10;
+dcl-c APP_MAXIMUM_PAGE_ROWS 999;
+
+///
+// DAL paging structure
+///
+
+dcl-ds APP_paging_t qualified template inz;
+  req_page      like(INTEGER_t);          // In  - required page
+  req_page_rows like(INTEGER_t);          // In  - number of rows per page
+  got_rows      like(UNSIGNED_INTEGER_t); // Out
+  total_pages   like(INTEGER_t);          // Out
+  total_rows    like(INTEGER_t);          // Out
+end-ds;
+
+///
+// Create a log entry.
+//
+// @param The message text to log.
+// @param Optional message type, defaults to APP_LOG_INFO.
+// @param Optional stack offset, defaults to 1.
+// @param Optional boolean, set true to have the program information
+//          appended to the message.
+///
+
+dcl-pr APP_log;
+  message_text like(APP_MESSAGE_TEXT_t) const;
+  message_type_in like(SMALLINT_t) options(*nopass:*omit) const;
+  stack_offset_in like(SMALLINT_t) options(*nopass:*omit) const;
+  add_pgm_info_in like(BOOLEAN_t) options(*nopass) const;
+end-pr;
+
+///
+// Throw an escape message.
+//
+// @param The escape message text.
+// @param Optional boolean, set true to have the program information
+//          appended to the message.
+///
+
+dcl-pr APP_escape;
+  message_text like(APP_MESSAGE_TEXT_t) const;
+  add_pgm_info_in like(BOOLEAN_t) options(*nopass) const;
+end-pr;
+
+///
+// Calculates the DAL paging data
+//
+// The following params are input values:
+// - calc.req_page      (set before call to DAL proc)
+// - calc.req_page_rows (set before call to DAL proc)
+// - calc.total_rows    (set in the DAL proc, before fetch)
+//
+// The following params are output values:
+// - calc.total_pages
+// - row_offset
+// - page_size
+//
+// The following params are not used and should not be used:
+// - calc.got_rows      (set in the DAL proc, after fetch)
+///
+
+dcl-pr APP_calc_page_data;
+  calc       likeds(APP_paging_t);
+  page_size  like(INTEGER_t);
+  row_offset like(INTEGER_t);
+end-pr;
+
+///
+// Add a field value selection to the SQL WHERE clause.
+//
+// Overload prototype.
+///
+
+dcl-pr APP_where_add like(STRING_SQL_t)
+  overload( APP_where_add_string
+          : APP_where_add_integer
+          : APP_where_add_date_range
+          : APP_where_add_integer_range );
+
+///
+// Add a string field value selection to the SQL WHERE clause
+//
+// @param the field name e.g. SUPPLIER_CODE
+// @param the field string value e.g. ABC123, if the field value
+//          is empty then the return string will be empty
+// @param the number of selections currently added to the
+//          where clause, this value will be incremented
+// @param optional, boolean value indicating whether the
+//          value should be wrapped in quotes, defaults
+//          to true
+// @return the constructed text portion of the where clause
+//           e.g. " AND SUPPLIER_CODE = 'ABC123'"
+///
+
+dcl-pr APP_where_add_string like(STRING_SQL_t);
+  field like(STRING_SQL_t) const;
+  field_value like(STRING_SQL_t) const;
+  selections_added like(SMALLINT_t);
+  wrap_in_quotes like(BOOLEAN_t) const options(*nopass);
+end-pr;
+
+///
+// Add an integer field value selection to the SQL WHERE clause
+//
+// @param the field name e.g. DUE_DAYS
+// @param the field integer value e.g. 30, if the field value
+//          is zero then the return string will be empty
+// @param the number of selections currently added to the
+//          where clause, this value will be incremented
+// @return the constructed text portion of the where clause
+//           e.g. " AND DUE_DAYS = 30"
+///
+
+dcl-pr APP_where_add_integer like(STRING_SQL_t);
+  field like(STRING_SQL_t) const;
+  field_value like(INTEGER_t) const;
+  selections_added like(SMALLINT_t);
+end-pr;
+
+///
+// Add a string field value starts with selection to the SQL
+// WHERE clause.
+//
+// @param the field name e.g. SUPPLIER_NAME
+// @param the partial field string value e.g. ABC, if the field value
+//          is empty then the return string will be empty
+// @param the number of selections currently added to the
+//          where clause, this value will be incremented
+// @return the constructed text portion of the where clause
+//           e.g. " AND SUPPLIER_NAME LIKE 'ABC%'"
+///
+
+dcl-pr APP_where_add_starts_with like(STRING_SQL_t);
+  field like(STRING_SQL_t) const;
+  field_value like(STRING_SQL_t) const;
+  selections_added like(SMALLINT_t);
+end-pr;
+
+///
+// Add a string field value contains selection to the SQL WHERE
+// clause.
+//
+// The contains selection is case insensitive, the column and
+// values are converted to lowercase for comparison.
+//
+// @param the field name e.g. SUPPLIER_NAME
+// @param the partial field string value e.g. ABC
+// @param the number of selections currently added to the
+//          where clause, this value will be incremented
+// @return the constructed text portion of the where clause
+//           e.g. " AND LOWER(SUPPLIER_NAME) LIKE '%abc%'"
+///
+
+dcl-pr APP_where_add_contains like(STRING_SQL_t);
+  field like(STRING_SQL_t) const;
+  field_value like(STRING_SQL_t) const;
+  selections_added like(SMALLINT_t);
+end-pr;
+
+///
+// Add a date field value range selection to the SQL WHERE
+// clause.
+//
+// Only non-empty date selections will be constructed. If both dates
+// are empty then an empty string will be returned.
+//
+// @param the field name e.g. DUE_DATE
+// @param the from date value e.g. 2023-09-01
+// @param the to date value e.g. 2023-09-30
+// @param the number of selections currently added to the
+//          where clause, this value will be incremented
+// @param optional, boolean value indicating whether the date
+//          range is inclusive, defaults to true
+//          where clause, this value will be incremented
+// @return the constructed text portion of the where clause
+//         e.g. " AND DUE_DATE >= '2023-09-01' AND DUE_DATE <= '2023-09-30'"
+///
+
+dcl-pr APP_where_add_date_range like(STRING_SQL_t);
+  field like(STRING_SQL_t) const;
+  date_from like(DATE_t) const;
+  date_to like(DATE_t) const;
+  selections_added like(SMALLINT_t);
+  inclusive like(BOOLEAN_t) const options(*nopass);
+end-pr;
+
+///
+// Add an integer field value range selection to the SQL WHERE
+// clause.
+//
+// Only non-empty integer selections will be constructed. If both
+// integers are empty then an empty string will be returned.
+//
+// @param the field name e.g. PRIORITY
+// @param the from integer value e.g. 30
+// @param the to integer value e.g. 40
+// @param the number of selections currently added to the
+//          where clause, this value will be incremented
+// @param optional, boolean value indicating whether the
+//          range is inclusive, defaults to true
+//          where clause, this value will be incremented
+// @return the constructed text portion of the where clause
+//         e.g. " AND PRIORITY >= 30 AND PRIORITY <= 40"
+///
+
+dcl-pr APP_where_add_integer_range like(STRING_SQL_t);
+  field like(STRING_SQL_t) const;
+  range_from like(INTEGER_t) const;
+  range_to like(INTEGER_t) const;
+  selections_added like(SMALLINT_t);
+  inclusive like(BOOLEAN_t) const options(*nopass);
+end-pr;
+
+///
+// Add a field value in list selection to the SQL WHERE clause.
+//
+// @param the field name e.g. STOCK_POINT
+// @param the field string value e.g. "'ND','N2','N3'" if the field value
+//          is empty then the return string will be empty
+// @param the number of selections currently added to the
+//          where clause, this value will be incremented
+// @return the constructed text portion of the where clause
+//           e.g. " AND STOCK_POINT IN('ND','N2','N3')"
+///
+
+dcl-pr APP_where_add_in_list like(STRING_SQL_t);
+  field like(STRING_SQL_t) const;
+  field_value like(STRING_SQL_t) const;
+  selections_added like(SMALLINT_t);
+end-pr;
+
+dcl-pr APP_user like(USER_t) end-pr;
+
+dcl-pr APP_date like(DATE_t) end-pr;
+
+dcl-pr APP_time like(TIME_t) end-pr;
+
+dcl-pr APP_timestamp like(TIMESTAMP_t) end-pr;

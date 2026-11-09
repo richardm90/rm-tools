@@ -1,0 +1,64 @@
+**free
+
+//==============================================================================
+// RMQCMD_D.rpgleinc
+//   QCMDEXC Helper Copybook
+//
+// 29/07/2024 - RM - created
+//==============================================================================
+
+/if defined(RMQCMD_D)
+/eof
+/endif
+/define RMQCMD_D
+
+///
+// Include copybooks
+///
+
+/include 'include/RMMSG_D.rpgleinc'
+/include 'include/RMTOOLS_D.rpgleinc'
+
+///
+// Constants definitions
+///
+
+dcl-c QCMD_CMD_SIZE const(65535);
+
+///
+// Return codes
+///
+
+dcl-c QCMD_RC_SUCCESS                   const(0);
+dcl-c QCMD_RC_ERROR                     const(1);
+
+///
+// Template field definitions
+///
+
+dcl-s QCMD_CMD_t varchar(QCMD_CMD_SIZE) template;
+
+///
+// Template field definitions
+///
+
+dcl-ds QCMD_ERR_t qualified template;
+  count like(SMALLINT_t) inz(0);
+  msgs  likeds(MSG_MESSAGE_t) dim(10);
+end-ds;
+
+///
+// Execute a CL command via QCMDEXC.
+//
+// Expected escape messages are captured.
+//
+// @param The CL command string to execute.
+// @param Optional error structure, if the command did not execute successfully
+//          then this structure will be populated with the job log messages.
+// @return Boolean, set true if the command was successfully executed.
+///
+
+dcl-pr QCMD_exc like(BOOLEAN_t);
+  cmd     like(QCMD_CMD_t)   const;
+  err     likeds(QCMD_ERR_t) options(*exact:*nopass);
+end-pr;

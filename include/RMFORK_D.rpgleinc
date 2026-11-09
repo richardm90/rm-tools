@@ -1,0 +1,179 @@
+**FREE
+
+//==============================================================================
+// RMFORK_D.rpgleinc
+//   Fork Helper Copybook
+//
+// 06/10/2026 - RM - created
+//==============================================================================
+
+/if defined(RMFORK_D)
+/eof
+/endif
+/define RMFORK_D
+
+///
+// Include copybooks
+///
+
+/include 'include/RMPASE_D.rpgleinc'
+/include 'include/RMSTRING_D.rpgleinc'
+/include 'include/RMTOOLS_D.rpgleinc'
+
+///
+// Constants definitions
+///
+
+// Matches rm-sc's own SCLAUNCH_MAX_ENV (QPROTOSRC/SCLAUNCH_D.RPGLEINC) -
+// deliberate, not a coincidence, so rm-sc's env.entry(i) array can pass
+// straight through to FORK_run_cmd with no reformatting in either direction.
+dcl-c FORK_MAX_ENVVARS const(48);
+
+// The one, global, version-shared location every rm-tools install on a box
+// calls - a deliberate limitation rather than an oversight. A PASE binary
+// cannot live in a QSYS library, and bind-by-copy erases any runtime way to
+// tell which OBJLIB built the caller, so all installs share one binary;
+// its argv shape and exit codes are therefore kept backward compatible.
+dcl-c FORK_NATIVE_PATH const('/QOpenSys/opt/rm-tools/bin/rmfork');
+
+// FORK_run_cmd's own rc range when it never reached PASE_run_cmd at all (the
+// PASE_CMD_SIZE overflow guard) - negative, so it can never
+// collide with the native binary's own 0/1/2/127 exit codes, which
+// PASE_run_cmd's rc reflects back unchanged.
+dcl-c FORK_RC_CMDLINE_TOO_LONG const(-1);
+
+///
+// Template field definitions
+///
+
+// IBM i job name - same shape as JOB_NAME_t (RMTOOLS_D.rpgleinc), named
+// separately here since this is a job name FORK_run_cmd is given to CREATE
+// (via f_fork400), not one it's reading back from the running job.
+dcl-s FORK_JOBNAME_t char(10) template;
+
+// A single, pre-formatted "NAME=VALUE" environment variable entry - matches
+// rm-sc's own SCDEF_ENVVAR_t (QPROTOSRC/SCDEF_D.RPGLEINC) exactly, varchar(512).
+// Deliberately NOT a name/value pair DS: entries are handed to the native
+// binary, and on to Qp2setenv_ile(), already formed, with no reformatting.
+dcl-s FORK_ENVVAR_t varchar(512) template;
+
+///
+// Publish a job's environment variables and start it, named, as a genuine
+// fork - not spawn() - so DSPJOB OPTION(*ENVVAR) sees them and the job gets
+// the identity its caller asked for.
+//
+// Wraps PASE_run_cmd - does not duplicate or bypass it. Builds a
+// shell-quoted command line invoking the deployed native rmfork binary
+// (FORK_NATIVE_PATH), then delegates to PASE_run_cmd and returns its rc
+// directly: the native binary's own exit codes (0 parent success, 1 wrong
+// args, 2 fork failed, 127 exec failed after fork succeeded) come straight
+// back unchanged.
+//
+// Checks the fully-quoted command line's length against PASE_CMD_SIZE
+// before ever calling PASE_run_cmd, and fails loudly with
+// FORK_RC_CMDLINE_TOO_LONG rather than silently truncating. Up to 48 x
+// 512-byte entries plus shell-quoting overhead can overflow PASE_CMD_SIZE
+// long before FORK_MAX_ENVVARS is reached - a few long values are enough.
+//
+// @param the job name the forked child will run under
+// @param optional, pre-formatted "NAME=VALUE" entries to publish into the
+//          child's job-level environment before it execs cmd
+// @param optional, how many of envvars' entries are actually populated -
+//          required whenever envvars is passed
+// @param the command the forked child execs after publishing envvars
+// @param optional, f_fork400's resourceID - 0/omitted lets the OS choose
+// @param optional, keep_stdio - false/omitted: the forked job's fd 0/1/2 are
+//          redirected to /dev/null (right for a long-running target).
+//          true: they stay as inherited so <cmd>'s own output reaches stdout.
+// @param optional, returned standard output, as PASE_run_cmd's own stdout
+//
+// WARNING - keep_stdio=true is ONLY for short-lived commands (e.g. a
+// system -kpiveO "SBMJOB ..." that exits in milliseconds). A long-running
+// command holds the caller's inherited stdio open for its whole life,
+// reintroducing exactly the hang risk the default redirect prevents, and
+// PASE_run_cmd blocks until the command closes the capture pipe - i.e. for
+// the command's entire lifetime. Also: rc NEVER reflects the command's own
+// exit status (the native launcher returns once the exec succeeds); with
+// keep_stdio a failing command is detected from its text in stdout.
+// MEASURED: the command's stderr reaches stdout without any 2>&1 in the
+// command.
+//
+// Env vars are published inside the forked job itself (two-phase child),
+// never in the calling process, so a caller in a long-lived job never has
+// its own environment modified. A Qp2setenv_ile failure (rc 3) therefore
+// happens after a successful fork.
+//
+// The published variables are job-level (visible in DSPJOB OPTION(*ENVVAR) /
+// JOB_get_envvars) and are NOT passed into <cmd>'s own process environment
+// (`echo $VAR` inside <cmd> is empty) - same as v2.2.0.
+//
+// @return result code - FORK_RC_CMDLINE_TOO_LONG if the assembled command
+//           line would exceed PASE_CMD_SIZE (nothing was run), otherwise
+//           the native binary's own exit code via PASE_run_cmd's rc
+///
+
+dcl-pr FORK_run_cmd like(INTEGER_t);
+  jobname    like(FORK_JOBNAME_t)     const;
+  envvars    like(FORK_ENVVAR_t)      const dim(FORK_MAX_ENVVARS) options(*omit);
+  envvars_n  like(UNSIGNED_INTEGER_t) const options(*omit);
+  cmd        like(PASE_CMD_t)         const;
+  resourceid like(UNSIGNED_INTEGER_t) const options(*nopass);
+  keep_stdio like(BOOLEAN_t)          const options(*nopass);
+  stdout     like(PASE_IO_t)                options(*omit:*nopass);
+end-pr;
+
+///
+// Assemble the full, shell-quoted command line FORK_run_cmd would hand to
+// PASE_run_cmd - without calling PASE_run_cmd. Exported, and factored out
+// of FORK_run_cmd itself, specifically so the PASE_CMD_SIZE overflow guard
+// and the envvars assembly can be unit-tested without ever actually
+// forking a PASE process from a test run (any FORK_run_cmd call that fits
+// would really fork/exec, which is not a safe unit-test boundary).
+//
+// @param the job name the forked child will run under
+// @param optional, pre-formatted "NAME=VALUE" entries to publish
+// @param optional, how many of envvars' entries are populated
+// @param the command the forked child execs after publishing envvars
+// @param the returned, fully-quoted command line - only meaningful when
+//          this returns true
+// @param optional, f_fork400's resourceID - 0/omitted lets the OS choose
+// @param optional, keep_stdio - only when true is an extra token emitted
+//          (<cmd> <rid-or-0> 1); false/omitted output is byte-identical to
+//          v2.2.0's. See FORK_run_cmd's warning: short-lived commands only.
+// @return true if the assembled line fits within PASE_CMD_SIZE and
+//           cmdline is populated; false if it would exceed PASE_CMD_SIZE
+//           (cmdline is left unchanged - the caller must not use it)
+//
+// cmdline is placed before the optional resourceid, not after - a
+// required (non-*omit/*nopass) parameter cannot follow an optional one
+// (RNF3756, confirmed the hard way while writing this).
+///
+
+dcl-pr FORK_build_cmdline like(BOOLEAN_t);
+  jobname    like(FORK_JOBNAME_t)     const;
+  envvars    like(FORK_ENVVAR_t)      const dim(FORK_MAX_ENVVARS) options(*omit);
+  envvars_n  like(UNSIGNED_INTEGER_t) const options(*omit);
+  cmd        like(PASE_CMD_t)         const;
+  cmdline    like(PASE_CMD_t);
+  resourceid like(UNSIGNED_INTEGER_t) const options(*nopass);
+  keep_stdio like(BOOLEAN_t)          const options(*nopass);
+end-pr;
+
+///
+// Shell-quote a single string: wrap it in single quotes, escaping any
+// embedded single quote via the standard '\'' technique, so it survives as
+// one argument through PASE_run_cmd's shell command line unchanged.
+//
+// Exported (rather than kept private) specifically so this can be
+// verified directly by an RPGUnit suite, in isolation, rather than only indirectly
+// through FORK_run_cmd's own PASE_run_cmd hand-off (which this project has
+// no way to safely unit-test - it really forks/execs).
+//
+// @param the raw string to quote
+// @return str, single-quoted and safe to place as one word on a shell
+//           command line
+///
+
+dcl-pr shell_quote like(STRING_t);
+  str like(STRING_t) const;
+end-pr;

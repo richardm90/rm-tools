@@ -1,0 +1,33 @@
+/* RMTOOLS - the binding directory consumers bind through.                    */
+/*                                                                            */
+/* Every entry is a *MODULE, so a program or service program that names this  */
+/* binding directory binds rm-tools BY COPY: the code is copied into the      */
+/* consumer, which then needs neither this library nor RMTOOLS at runtime.    */
+/* The binder copies in only the modules whose exports are actually           */
+/* referenced, so an unused entry costs nothing.                              */
+/*                                                                            */
+/* Entries are library-qualified with &O, the library this build targets.     */
+/*                                                                            */
+/* Delete first: CRTBNDDIR fails if the object exists, which would leave only */
+/* ADDBNDDIRE running and silently accumulate duplicate entries.              */
+!DLTOBJ OBJ(&O/&N) OBJTYPE(*BNDDIR)
+CRTBNDDIR BNDDIR(&O/&N) TEXT('rm-tools: helper modules, bound by copy')
+ADDBNDDIRE BNDDIR(&O/&N) +
+   OBJ( (&O/RMAPP01    *MODULE) +
+        (&O/RMAPP02    *MODULE) +
+        (&O/RMAPP03    *MODULE) +
+        (&O/RMEMBSQL   *MODULE) +
+        (&O/RMENVVAR   *MODULE) +
+        (&O/RMFORK     *MODULE) +
+        (&O/RMIFS      *MODULE) +
+        (&O/RMJOB      *MODULE) +
+        (&O/RMLIST     *MODULE) +
+        (&O/RMMSG      *MODULE) +
+        (&O/RMPASE     *MODULE) +
+        (&O/RMPATH     *MODULE) +
+        (&O/RMQCMD     *MODULE) +
+        (&O/RMSPACE    *MODULE) +
+        (&O/RMSTRING01 *MODULE) +
+        (&O/RMSTRING02 *MODULE) +
+        (&O/UNIXCMDOA  *MODULE) +
+        (&O/UNIXPIPER4 *MODULE) )

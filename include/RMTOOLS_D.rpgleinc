@@ -1,0 +1,196 @@
+**free
+
+/if defined(RMTOOLS_D)
+/eof
+/endif
+/define RMTOOLS_D
+
+//==============================================================================
+// RMTOOLS_D  - RMTOOLS standard definitions copybook for RPG source files
+//
+// 01/08/2023 - RM - created
+//==============================================================================
+
+//==============================================================================
+// Standard data types
+//==============================================================================
+
+// Signed integer format (range of values = -9223372036854775808 to
+// 9223372036854775807)
+dcl-s BIGINT_t int(20) inz(0) template;
+
+// Indicator (character) format
+dcl-s BOOLEAN_t ind inz(false) template;
+
+// Date, initialised to current date
+dcl-s DATE_t date inz(*sys) template;
+
+// Signed integer format (range of values = -2147483648 to 2147483647)
+dcl-s INTEGER_t int(10) inz(0) template;
+
+// Signed integer format (range of values = -32768 to 32767)
+dcl-s SMALLINT_t int(5) inz(0) template;
+
+// Time, initialised to current time
+dcl-s TIME_t time inz(*sys) template;
+
+// Timestamp, initialised to current timestamp
+dcl-s TIMESTAMP_t timestamp inz(*sys) template;
+
+// Unsigned integer format (range of values = 0 to 18446744073709551615)
+dcl-s UNSIGNED_BIGINT_t uns(20) inz(0) template;
+
+// Unsigned integer format (range of values = 0 to 4294967295)
+dcl-s UNSIGNED_INTEGER_t uns(10) inz(0) template;
+
+// Unsigned integer format (range of values = 0 to 65535)
+dcl-s UNSIGNED_SMALLINT_t uns(5) inz(0) template;
+
+//==============================================================================
+// Application data types definitions
+//==============================================================================
+
+// IBM i CCSID
+dcl-s CCSID_t like(UNSIGNED_SMALLINT_t) template;
+
+// IBM i DSPLY  message
+dcl-s DSPLY_t varchar(52) template;
+
+// IBM i RPG field name
+dcl-s FIELD_NAME_t char(10) template;
+
+// IBM i full job name
+dcl-s JOB_FULL_NAME_t varchar(28) template;
+
+// IBM i job name
+dcl-s JOB_NAME_t char(10) template;
+
+// IBM i job number
+dcl-s JOB_NUMBER_t zoned(6) template;
+dcl-s JOB_NUMBER_CHAR_t char(6) template;
+
+// Null indicator
+dcl-s NULLIND_t bindec(4) template;
+
+// IBM i object attribute
+dcl-s OBJ_ATR_t char(10) template;
+
+// IBM i object name
+dcl-s OBJ_NAME_t char(10) template;
+
+// IBM i qualified object name
+//  ....+....1....+....2
+// <object----library--->
+dcl-s QUAL_OBJ_NAME_t char(20) template;
+
+// IBM i object target release
+dcl-s OBJ_TGTRLS_t char(8) template;
+
+// IBM i object type
+dcl-s OBJ_TYPE_t char(10) template;
+
+// IBM i procedure name
+dcl-s PROC_NAME_t varchar(64) template;
+
+// Stream file name
+dcl-s STMF_t varchar(1024) template;
+
+// String (maximum length)
+dcl-c MAX_STRING_LEN const(65535);
+dcl-s STRING_t varchar(MAX_STRING_LEN) inz('') template;
+
+// SQL string
+dcl-s STRING_SQL_t varchar(32740) template;
+
+// URL string
+dcl-s URL_t varchar(1024) template;
+
+// IBM i user
+dcl-s USER_t char(10) template;
+
+// UUID
+dcl-s UUID_t varchar(36) template;
+
+// IBM i SQL user name
+dcl-s USER_SQL_t varchar(18) template;
+
+/if defined(IBM_API_DEFINITIONS)
+
+//==============================================================================
+// IBM API definitions
+//==============================================================================
+
+// API error code parameter format ERRC0100
+dcl-ds ERRC0100_t qualified template inz;
+  provided      int(10)     inz(%size(ERRC0100_t));
+  available     int(10)     inz(0);
+  exception_id  char(7)     inz('');
+  reserved      char(1)     inz('');
+  data          char(1024)  inz('');
+end-ds;
+
+// API error code parameter format ERRC0100
+// - initialised with zero bytes provided
+// - which means errors exceptions will be returned by the API
+dcl-ds ERRC0100_ZERO_t qualified template inz;
+  provided      int(10)     inz(0);
+  available     int(10)     inz(0);
+  exception_id  char(7)     inz('');
+  reserved      char(1)     inz('');
+  data          char(1024)  inz('');
+end-ds;
+
+// IBM API format e.g. 'OBJN0100'
+dcl-s IBM_API_FORMAT_t char(8) template;
+
+/endif
+
+//==============================================================================
+// IBM i command parameters
+//==============================================================================
+
+// IBM i command parameter of type *PNAME
+dcl-s CMD_PARM_PNAME_t varchar(5000) template;
+
+// 'OBJECT    LIBRARY   '
+dcl-ds CMD_QUALIFIED_OBJECT_t qualified template;
+  object  like(OBJ_NAME_t);
+  library like(OBJ_NAME_t);
+end-ds;
+
+//==============================================================================
+// Linefeed constant values
+//==============================================================================
+
+// Unicode and ASCII new line character
+dcl-c ASCII_LF x'0A';
+
+// EBCDIC new line character
+dcl-c LF x'25';
+
+// EBCDIC carriage return and new line characters
+dcl-c CRLF x'0d25';
+
+//==============================================================================
+// Boolean true/false constant values
+//==============================================================================
+
+dcl-c TRUE              const(*on);
+dcl-c FALSE             const(*off);
+
+//==============================================================================
+// Null constant values
+//==============================================================================
+
+dcl-c NULL_VALUE        -1;
+dcl-c NON_NULL_VALUE    0;
+
+//==============================================================================
+// Empty value named constants
+//==============================================================================
+
+// Empty date, for comparison
+dcl-c EMPTY_DATE        d'0001-01-01';
+
+// Empty timestamp, for comparison
+dcl-c EMPTY_TIMESTAMP   z'0001-01-01-00.00.00';

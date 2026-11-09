@@ -1,0 +1,31 @@
+**free
+
+//==============================================================================
+// RMTOOLS_H.rpgleinc
+//   RMTOOLS standard header control options copybook for RPG source files
+//
+// 01/08/2023 - RM - created
+// 30/07/2024 - RM - move compile options to RMCOMP_H
+//==============================================================================
+
+/if defined(RMTOOLS_H)
+/eof
+/endif
+/define RMTOOLS_H
+
+//==============================================================================
+// Service program control specifications
+//==============================================================================
+
+/IF defined(APP_SERVICE_PROGRAM)
+ctl-opt nomain;
+/ENDIF
+/IF defined(APP_ACTGRP_NEW)
+ctl-opt dftactgrp(*no) actgrp(*new);
+/ENDIF
+/IF defined(APP_ACTGRP_CALLER)
+ctl-opt dftactgrp(*no) actgrp(*caller);
+/ENDIF
+/IF defined(APP_BNDDIR_RMTOOLS)
+ctl-opt bnddir('RMTOOLS');
+/ENDIF

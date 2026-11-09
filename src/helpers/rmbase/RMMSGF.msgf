@@ -1,0 +1,6 @@
+/* Both lines are allowed to fail (!) - on every build after the first, the  */
+/* message file and its one description already exist, exactly as the       */
+/* original makefile's raw CRTMSGF/ADDMSGD pair (both run with "-system")    */
+/* tolerated.                                                                */
+!CRTMSGF MSGF(&O/&N) TEXT('rm-tools: message file')
+!ADDMSGD MSGID(APP2901) MSGF(&O/&N) MSG('&1') FMT((*CHAR 512))

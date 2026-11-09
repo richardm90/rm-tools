@@ -1,0 +1,259 @@
+**free
+
+/if defined(RMLIST_D)
+/eof
+/endif
+/define RMLIST_D
+
+//==============================================================================
+// RMLIST_D   - List Helper Copybook
+//
+// 01/08/2023 - RM - created
+//==============================================================================
+
+///
+// Include copybooks
+///
+
+/include 'include/RMTOOLS_D.rpgleinc'
+
+///
+// Declare data structure
+///
+
+dcl-ds LIST_t qualified template inz;
+  lib_name like(OBJ_NAME_t) inz('');
+  list_name like(OBJ_NAME_t) inz('');
+  key_size like(INTEGER_t) inz(0);
+  val_size like(INTEGER_t) inz(0);
+  row_size like(INTEGER_t) inz(0);
+  num_rows like(INTEGER_t) inz(0);
+  max_rows like(INTEGER_t) inz(0);
+  cursor like(INTEGER_t) inz(0);
+end-ds;
+
+///
+// Declare prototypes
+///
+
+///
+// Create a list.
+//
+// This creates a list user space.
+//
+// @param list name, the user space name
+// @param the size of each list entry data value
+// @param optional, the size of each list entry key, if omiited then
+//   no key value will be associated with the entry
+// @param optional library name for the user space, if not specified
+//   then defaults to QTEMP
+// @return none
+///
+
+dcl-pr LIST_create likeds(LIST_t);
+  list_name      like(OBJ_NAME_t) const;
+  val_size       like(INTEGER_t) const;
+  key_size       like(INTEGER_t) const options(*omit:*nopass);
+  lib_name       like(OBJ_NAME_t) const options(*nopass);
+end-pr;
+
+///
+// Add a row to a list user space.
+//
+// @param list structure
+// @param a pointer to the row data value
+// @param optional, a pointer to the row key value
+// @return boolean indicating success
+///
+
+dcl-pr LIST_add  like(BOOLEAN_t);
+  list           likeds(LIST_t);
+  data_val pointer const;
+  data_key pointer const options(*nopass);
+end-pr;
+
+///
+// Retrieve a specific row from a list user space.
+//
+// @param list structure
+// @param the row number (rrn) to retrieve
+// @param a pointer to the row data value, the fetched row data
+//   value will be placed here
+// @param optional, a pointer to the row key value, if provided
+//   the fetched row key value will be placed here
+// @return boolean indicating success
+///
+
+dcl-pr LIST_get_by_rrn like(BOOLEAN_t);
+  list     likeds(LIST_t);
+  rrn      like(INTEGER_t) const;
+  data_val pointer const;
+  data_key pointer const options(*nopass);
+end-pr;
+
+///
+// Retrieve a specific row from a list user space.
+//
+// @param list structure
+// @param a pointer to the row data value, the fetched row data
+//   value will be placed here
+// @param a pointer to the row key value, this key value will
+//   be used to fetch the row data value, the first matching
+//   key will be matched
+// @return boolean indicating success
+///
+
+dcl-pr LIST_get_by_key like(BOOLEAN_t);
+  list     likeds(LIST_t);
+  data_val pointer const;
+  data_key pointer const;
+end-pr;
+
+///
+// Update a specific row from a list user space.
+//
+// @param list structure
+// @param the row number (rrn) to update
+// @param a pointer to the row data value, the list row data will
+//   be updated with this value
+// @param optional, a pointer to the row key value, the list row
+//   key will be updated with this value
+// @return boolean indicating success
+///
+
+dcl-pr LIST_update_by_rrn like(BOOLEAN_t);
+  list     likeds(LIST_t);
+  rrn      like(INTEGER_t) const;
+  data_val pointer const;
+  data_key pointer const options(*nopass);
+end-pr;
+
+///
+// Update a specific row from a list user space.
+//
+// Note that the key value itself cannot be updated using this
+// procedure, use the LIST_update_by_rrn procedure instead.
+//
+// @param list structure
+// @param a pointer to the row data value, the list row data will
+//   be updated with this value
+// @param a pointer to the row key value, this key value will
+//   be used to update the row data value, the first matching
+//   key will be updated
+// @return boolean indicating success
+///
+
+dcl-pr LIST_update_by_key like(BOOLEAN_t);
+  list     likeds(LIST_t);
+  data_val pointer const;
+  data_key pointer const;
+end-pr;
+
+///
+// Delete a specific row from a list user space.
+//
+// @param list structure
+// @param the row number (rrn) to delete
+// @return boolean indicating success
+///
+
+dcl-pr LIST_delete_by_rrn like(BOOLEAN_t);
+  list     likeds(LIST_t);
+  rrn      like(INTEGER_t) const;
+end-pr;
+
+///
+// Delete a specific row from a list user space.
+//
+// @param list structure
+// @param a pointer to the row key value, this key value will
+//   be used to delete the row data value, the first matching
+//   key will be deleted
+// @return boolean indicating success
+///
+
+dcl-pr LIST_delete_by_key like(BOOLEAN_t);
+  list     likeds(LIST_t);
+  data_key pointer const;
+end-pr;
+
+///
+// Position to a specific row in a list user space.
+//
+// @param list structure
+// @param the row number to position to
+// @return boolean indicating success
+///
+
+dcl-pr LIST_pos like(BOOLEAN_t);
+  list    likeds(LIST_t);
+  cursor  like(INTEGER_t) const;
+end-pr;
+
+///
+// Fetch the next row from a list user space.
+//
+// @param list structure
+// @param a pointer to the row data value, the fetched row data
+//   value will be placed here
+// @param optional, a pointer to the row key value, if provided
+//   the fetched row key value will be placed here
+// @return boolean indicating success
+///
+
+dcl-pr LIST_fetch like(BOOLEAN_t);
+  list    likeds(LIST_t);
+  data_val pointer const;
+  data_key pointer const options(*nopass);
+end-pr;
+
+///
+// Sort a list user space in place.
+//
+// The rows are reordered in place using the ILE C qsort API. The
+// caller supplies a comparator procedure that receives a pointer to
+// two rows and returns a value less than, equal to, or greater than
+// zero when the first row sorts before, equal to, or after the second
+// (the memcmp convention). Each row pointer addresses the raw row,
+// laid out as the key value followed by the data value. Sorting resets
+// the cursor.
+//
+// @param list structure
+// @param a procedure pointer to the comparator, obtained with %paddr
+// @return boolean indicating success
+///
+
+dcl-pr LIST_sort like(BOOLEAN_t);
+  list    likeds(LIST_t);
+  compare pointer(*proc) const;
+end-pr;
+
+///
+// Sort a keyed list user space by its key, in place.
+//
+// Convenience wrapper over LIST_sort that orders the list on its key
+// value, compared as raw bytes. The list must have been created with a
+// key size; a keyless list returns false. The byte comparison is a
+// true ordering only for character data and unsigned big-endian
+// numbers - use LIST_sort with a comparator for anything else.
+//
+// @param list structure
+// @return boolean indicating success
+///
+
+dcl-pr LIST_sort_by_key like(BOOLEAN_t);
+  list likeds(LIST_t);
+end-pr;
+
+///
+// Delete a list.
+//
+// This deletes the list user space.
+//
+// @param list structure
+// @return boolean indicating success
+///
+
+dcl-pr LIST_delete like(BOOLEAN_t);
+  list likeds(LIST_t) const;
+end-pr;

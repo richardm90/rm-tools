@@ -1,0 +1,112 @@
+**FREE
+
+//==============================================================================
+// RMPASE_D.rpgleinc
+//   PASE Helper Copybook
+//
+// 18/11/2023 - RM - created
+//==============================================================================
+
+/if defined(RMPASE_D)
+/eof
+/endif
+/define RMPASE_D
+
+///
+// Include copybooks
+///
+
+/include 'include/RMSTRING_D.rpgleinc'
+/include 'include/RMTOOLS_D.rpgleinc'
+
+///
+// Constants definitions
+///
+
+dcl-c PASE_IO_SIZE const(65535);
+dcl-c PASE_CMD_SIZE const(5000);
+dcl-c PASE_RCD_SIZE const(1000);
+
+// Return code values
+dcl-c PASE_RC_SUCCESS const(0);
+
+///
+// Template field definitions
+///
+
+dcl-s PASE_IO_t varchar(PASE_IO_SIZE) template;
+dcl-s PASE_CMD_t varchar(PASE_CMD_SIZE) template;
+dcl-s PASE_STDOUT_ROW_t char(PASE_RCD_SIZE) template;
+
+///
+// Run a PASE command.
+//
+// Expected escape messages are captured.
+//
+// @param optional, standard input, if provided will be piped to command
+// @param PASE command to execute
+// @param optional, returned standard output as a PASE_IO_t string
+// @param optional, boolean indicating debugging is required, this will
+//          send standard output to a spooled file
+// @param optional, boolean indicating the provided standard input should be
+//          converted from the job CCSID to 819, defaults to false
+// @return result code, 0 = success, note that certain commands may return a
+//           non-zero result code even when the command has run successfully
+///
+
+dcl-pr PASE_run_cmd like(INTEGER_t);
+  stdin     like(PASE_IO_t)   const  options(*omit);
+  cmd       like(PASE_CMD_t)  const;
+  stdout    like(PASE_IO_t)          options(*omit:*nopass);
+  debug     like(BOOLEAN_t)   const  options(*omit:*nopass);
+  cnv_stdin like(BOOLEAN_t)   const  options(*nopass);
+end-pr;
+
+///
+// Send standard output, from the last PASE command, to the job log.
+//
+// Each line of the standard output is sent to the job log as a separate
+// information message.
+//
+// @param Optional PASE command return code, if supplied this will be output
+//          as a message in the job log.
+///
+
+dcl-pr PASE_log_stdout;
+  rc like(INTEGER_t) const options(*nopass);
+end-pr;
+
+///
+// Return the first row of the standard output, from the last PASE command.
+//
+// @param The returned first row from standard output.
+// @return Boolean, set true if the first row was returned.
+///
+
+dcl-pr PASE_stdout_get_first_row like(BOOLEAN_t);
+  stdout_row like(STRING_t) ccsid(*utf8);
+end-pr;
+
+///
+// Return the requested row of the standard output, from the last PASE command.
+//
+// @param The returned row from standard output.
+// @param The index value of 1, if a row was found.
+// @return Boolean, set true if the first row was returned.
+///
+
+dcl-pr PASE_stdout_get_row like(BOOLEAN_t);
+  stdout_index like(UNSIGNED_INTEGER_t) const;
+  stdout_row like(STRING_t) ccsid(*utf8);
+end-pr;
+
+///
+// Return the last line of the standard output, from the last PASE command.
+//
+// @param The returned last row from standard output.
+// @return Boolean, set true if the last row was returned.
+///
+
+dcl-pr PASE_stdout_get_last_row like(BOOLEAN_t);
+  stdout_row like(STRING_t) ccsid(*utf8);
+end-pr;

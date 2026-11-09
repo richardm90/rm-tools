@@ -1,0 +1,48 @@
+**FREE
+
+/if defined(RMPATH_D)
+/eof
+/endif
+/define RMPATH_D
+
+//==============================================================================
+// RMHMAC_D   - Path Helper Copybook
+//
+// 21/11/2020 - RM - created
+//==============================================================================
+
+///
+// Include copybooks
+///
+
+/include 'include/RMTOOLS_D.rpgleinc'
+
+//==============================================================================
+// Define field templates
+//==============================================================================
+
+dcl-s PATH_EXT_t varchar(32);
+dcl-s PATH_BASENAME_t varchar(255);
+
+//==============================================================================
+// Define constant values
+//==============================================================================
+
+dcl-c PATH_SEP '/';
+dcl-c PATH_DOT '.';
+
+//========================================================================
+// Define global prototypes
+//========================================================================
+
+dcl-pr PATH_basename like(PATH_BASENAME_t);
+  path like(STMF_t) const;
+end-pr;
+
+dcl-pr PATH_name like(PATH_BASENAME_t);
+  path like(STMF_t) const;
+end-pr;
+
+dcl-pr PATH_ext like(PATH_EXT_t);
+  path like(STMF_t) const;
+end-pr;

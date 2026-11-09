@@ -1,0 +1,115 @@
+**free
+
+/if defined(RMSPACE_D)
+/eof
+/endif
+/define RMSPACE_D
+
+//==============================================================================
+// RMSPACE_D  - User Space Copybook
+//
+// 16/11/2024 - RM - created
+//==============================================================================
+
+/include 'include/RMTOOLS_D.rpgleinc'
+
+//==============================================================================
+// SPACE template fields
+//==============================================================================
+
+dcl-s SPACE_NAME_t        like(OBJ_NAME_t);
+dcl-s SPACE_LIST_HANDLE_t like(INTEGER_t);
+
+//==============================================================================
+// SPACE prototypes
+//==============================================================================
+
+dcl-pr SPACE_new;
+  pLibName       Char(10)   Value;
+  pSpaceName     Char(10)   Value;
+  pInitSize      Int(10)    Value Options(*NoPass);
+  pInitValue     Char(32767) Value Options(*NoPass);
+end-pr;
+
+dcl-pr SPACE_create;
+  pLibName       Char(10)   value;
+  pSpaceName     Char(10)   value;
+  pExtndAttr     Char(10)   value;
+  pInitSize      Int(10)    value;
+  pInitValue     Char(1)    value;
+  pPubAuth       Char(10)   value;
+  pTextDesc      Char(50)   value;
+  pReplace       Char(10)   value;
+end-pr;
+
+dcl-pr SPACE_retrieve_pointer Pointer;
+  pLibName       Char(10)   Value;
+  pSpaceName     Char(10)   Value;
+end-pr;
+
+dcl-pr SPACE_retrieve Char(32767);
+  pLibName       Char(10)   value;
+  pSpaceName     Char(10)   value;
+  pStartPos      Int(10)    value;
+  pDataLen       Int(10)    value;
+end-pr;
+
+dcl-pr SPACE_change;
+  pLibName       Char(10)   Value;
+  pSpaceName     Char(10)   Value;
+  pStartPos      Int(10)    Value;
+  pDataLen       Int(10)    Value;
+  pData          Char(32767) Value;
+  pForceChgToAuxStorage Char(1) Value options(*nopass);
+end-pr;
+
+dcl-pr SPACE_delete;
+  pLibName       Char(10)   Value;
+  pSpaceName     Char(10)   Value;
+end-pr;
+
+dcl-pr SPACE_set_extendable;
+  pLibName       Char(10)   Value;
+  pSpaceName     Char(10)   Value;
+  pExtend        Ind        Value;
+end-pr;
+
+dcl-pr SPACE_exists Ind;
+  library_name   Char(10)   value;
+  user_SPACES_name Char(10)   value;
+end-pr;
+
+dcl-pr SPACE_list_new like(SPACE_LIST_HANDLE_t);
+  lib_name   like(OBJ_NAME_t) const;
+  space_name like(OBJ_NAME_t) const;
+  row_size   like(INTEGER_t) const;
+end-pr;
+
+dcl-pr SPACE_list_inz;
+  handle like(SPACE_LIST_HANDLE_t) const;
+end-pr;
+
+dcl-pr SPACE_list_delete;
+  handle like(SPACE_LIST_HANDLE_t) const;
+end-pr;
+
+dcl-pr SPACE_list_row_add;
+  handle    like(SPACE_LIST_HANDLE_t) const;
+  list_data pointer const;
+end-pr;
+
+
+dcl-pr SPACE_list_row_pos like(BOOLEAN_t);
+  handle  like(SPACE_LIST_HANDLE_t) const;
+  cursor  like(INTEGER_t) options(*nopass) const;
+end-pr;
+
+dcl-pr SPACE_list_row_first like(BOOLEAN_t);
+  handle  like(SPACE_LIST_HANDLE_t) const;
+  data    pointer;
+end-pr;
+
+dcl-pr SPACE_list_row_next like(BOOLEAN_t);
+  handle  like(SPACE_LIST_HANDLE_t) const;
+  data    pointer;
+end-pr;

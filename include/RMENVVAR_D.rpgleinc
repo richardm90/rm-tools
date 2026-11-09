@@ -1,0 +1,64 @@
+**free
+
+/if defined(RMENVVAR_D)
+/eof
+/endif
+/define RMENVVAR_D
+
+//==============================================================================
+// RMENVVAR_D - Environment Variables Helper Copybook
+//
+// 11/11/2024 - RM - created
+//==============================================================================
+
+//========================================================================
+// Define global constants
+//========================================================================
+
+// Environment variable level *JOB
+dcl-c ENVVAR_LEVEL_JOB '*JOB';
+
+// Environment variable level *SYS
+dcl-c ENVVAR_LEVEL_SYS '*SYS';
+
+// Environment variable level *FIRST
+// - Only valid for ENVVAR_dlt
+dcl-c ENVVAR_LEVEL_FIRST '*FIRST';
+
+//========================================================================
+// Define global fields
+//========================================================================
+
+// Environment variable name
+dcl-s ENVVAR_key_t varchar(128) template;
+
+// Environment variable value
+dcl-s ENVVAR_value_t varchar(1024) template;
+
+// Environment variable value
+dcl-s ENVVAR_key_value_t varchar(1153) template;
+
+// Environment variable level (*JOB or *SYS)
+dcl-s ENVVAR_level_t char(4) template;
+
+// Environment variable CCSID
+dcl-s ENVVAR_ccsid_t like(INTEGER_t) template;
+
+//========================================================================
+// Define global prototypes
+//========================================================================
+
+dcl-pr ENVVAR_get like(ENVVAR_value_t);
+  p_key   like(ENVVAR_key_t) const;
+end-pr;
+
+dcl-pr ENVVAR_put like(BOOLEAN_t);
+  p_key   like(ENVVAR_key_t) const;
+  p_value like(ENVVAR_value_t) const;
+  p_level like(ENVVAR_level_t) options(*nopass) const;
+end-pr;
+
+dcl-pr ENVVAR_dlt like(BOOLEAN_t);
+  p_key   like(ENVVAR_key_t) const;
+  p_level like(ENVVAR_level_t) const options(*nopass);
+end-pr;

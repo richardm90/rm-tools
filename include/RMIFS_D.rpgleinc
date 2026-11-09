@@ -1,0 +1,392 @@
+**FREE
+
+//==============================================================================
+// RMIFS_D.rpgleinc
+//   IFS helper copybook
+//==============================================================================
+
+/if defined(RMIFS_D)
+/eof
+/endif
+/define RMIFS_D
+
+///
+// Include copybooks
+///
+
+/include 'include/RMTOOLS_D.rpgleinc'
+
+//==============================================================================
+// Define global data structures
+//==============================================================================
+
+// IFS error data structure, returned by IFS_get_error_data
+dcl-ds IFS_ERROR_DATA_t  qualified;
+  error_number              like(INTEGER_t);
+  error_msg                 like(IFS_ERROR_MSG_t);
+end-ds;
+
+
+///
+// Stream file stats
+///
+dcl-ds IFS_stats_t qualified template inz;
+  st_mode        like(UNSIGNED_INTEGER_t);
+  st_ino         like(UNSIGNED_INTEGER_t);
+  st_nlink       like(UNSIGNED_SMALLINT_t);
+  st_reserved2   like(UNSIGNED_SMALLINT_t);
+  st_uid         like(UNSIGNED_INTEGER_t);
+  st_gid         like(UNSIGNED_INTEGER_t);
+  st_size        like(INTEGER_t);
+  st_atime       like(INTEGER_t);
+  st_mtime       like(INTEGER_t);
+  st_ctime       like(UNSIGNED_INTEGER_t);
+  st_dev         like(UNSIGNED_INTEGER_t);
+  st_blksize     like(UNSIGNED_INTEGER_t);
+  st_allocsize   like(UNSIGNED_INTEGER_t);
+  st_objtype     char(11);
+  st_reserved3   char(1);
+  st_codepage    like(UNSIGNED_SMALLINT_t);
+  st_ccsid       like(UNSIGNED_SMALLINT_t);
+  st_rdev        like(UNSIGNED_INTEGER_t);
+  st_nlink32     like(UNSIGNED_INTEGER_t);
+  st_rdev64      like(UNSIGNED_BIGINT_t);
+  st_dev64       like(UNSIGNED_BIGINT_t);
+  st_reserved1   char(32);
+  st_ino_gen_id  like(UNSIGNED_INTEGER_t);
+end-ds;
+
+
+//==============================================================================
+// Define global prototypes
+//==============================================================================
+
+dcl-pr IFS_error like(BOOLEAN_t) end-pr;
+
+dcl-pr IFS_get_error_data likeds(IFS_ERROR_DATA_t) end-pr;
+
+dcl-pr IFS_crtdir;
+  path like(STMF_t) const;
+end-pr;
+
+dcl-pr IFS_dltdir;
+  path                    like(STMF_t) const;
+end-pr;
+
+dcl-pr IFS_opendir pointer;
+  path                     like(STMF_t) const;
+end-pr;
+
+dcl-pr IFS_readdir  like(BOOLEAN_t);
+  p_dir_handle   pointer    value;
+  filename like(IFS_DIR_FILENAME_t) options(*nopass);
+end-pr;
+
+dcl-pr IFS_direntry_filename  like(IFS_DIR_FILENAME_t);
+end-pr;
+
+dcl-pr IFS_closedir;
+  pDirHandle     pointer    value;
+end-pr;
+
+dcl-pr IFS_rename like(BOOLEAN_t);
+  pOldName       pointer    value options(*string);
+  pNewName       pointer    value options(*string);
+  replace        like(BOOLEAN_t) const options(*nopass);
+end-pr;
+
+dcl-pr IFS_dltstmf;
+  path                     like(STMF_t) const;
+end-pr;
+
+dcl-pr IFS_isa_directory Ind;
+  path                     like(STMF_t) const;
+end-pr;
+
+dcl-pr IFS_stats likeds(IFS_stats_t);
+  stmf pointer value options(*string);
+end-pr;
+
+dcl-pr IFS_stats_modified  like(TIMESTAMP_t);
+  p_stmf         pointer    value options(*string);
+end-pr;
+
+dcl-pr IFS_format_ifs_path  like(STMF_t);
+  path                     like(STMF_t) const;
+end-pr;
+
+dcl-pr IFS_close_file;
+  p_handle                  like(INTEGER_t) const;
+end-pr;
+
+dcl-pr IFS_remove_file;
+  p_file                    like(STMF_t) const;
+end-pr;
+
+dcl-pr IFS_open  like(INTEGER_t);
+  stmf                      like(STMF_t) const;
+  flags                     like(INTEGER_t) const;
+  mode                      like(UNSIGNED_INTEGER_t) const options(*nopass);
+  ccsid                     like(UNSIGNED_INTEGER_t) const options(*nopass);
+  txtcreatid                like(UNSIGNED_INTEGER_t) const options(*nopass);
+end-pr;
+
+dcl-pr IFS_open_file  like(INTEGER_t);
+  p_file                    like(STMF_t) const;
+  p_open_type               like(INTEGER_t) const options(*nopass);
+end-pr;
+
+dcl-pr IFS_write;
+  p_handle                  like(INTEGER_t) const;
+  p_data                    like(STRING_t) value;
+end-pr;
+
+dcl-pr IFS_write_utf8 ;
+  handle   like(INTEGER_t) const;
+  data     like(STRING_t) ccsid(*utf8) value;
+end-pr;
+
+dcl-pr IFS_error_text  like(IFS_ERROR_MSG_t) end-pr;
+
+dcl-pr IFS_read like(STRING_t) ccsid(*utf8);
+  p_file like(STMF_t) const;
+end-pr;
+
+///
+// Returns a temporary IFS file name.
+//
+// @param Optional path, if not provided defaults to /tmp.
+// @return Temporary file name.
+///
+
+dcl-pr IFS_temp_filename  like(STMF_t);
+  path like(STMF_t) options(*nopass) const;
+end-pr;
+
+dcl-pr IFS_join_path  like(STMF_t);
+  path1                   like(STMF_t) const;
+  path2                   like(STMF_t) const;
+end-pr;
+
+dcl-pr IFS_fopen pointer;
+  p_file                    like(STMF_t) const;
+  p_open_type               like(INTEGER_t) const options(*nopass);
+end-pr;
+
+dcl-pr IFS_fgets  like(BOOLEAN_t);
+  p_handle       pointer;
+  p_line                    like(STRING_t);
+end-pr;
+
+dcl-pr IFS_feof  like(BOOLEAN_t);
+end-pr;
+
+dcl-pr IFS_fputs;
+  p_handle       pointer;
+  p_line                    like(STRING_t) const;
+end-pr;
+
+dcl-pr IFS_fclose;
+  p_handle       pointer;
+end-pr;
+
+dcl-pr IFS_extension  like(IFS_EXTENSION_t);
+  file                      like(STMF_t) const;
+end-pr;
+
+//========================================================================
+// IFS copy book fields
+//========================================================================
+
+dcl-s IFS_DIR_FILENAME_t  varchar(640)  template;
+dcl-s IFS_ERROR_MSG_t     varchar(256)  template;
+dcl-s IFS_EXTENSION_t     varchar(32)   template;
+
+
+//========================================================================
+// IFS copy book constants
+//========================================================================
+
+dcl-c IFS_OPEN_TYPE_READ                const(1);
+dcl-c IFS_OPEN_TYPE_WRITE               const(2);
+
+// Open the IFS stream file for read
+// - the file data is expected to be UTF-8 and the data will be
+//   returned as UTF-8
+dcl-c IFS_OPEN_TYPE_READ_UTF8           const(3);
+
+//*********************************************************************
+//      Mode Flags.
+//         basically, the mode parm of open(), creat(), chmod(),etc
+//         uses 9 least significant bits to determine the
+//         file's mode. (peoples access rights to the file)
+
+//           user:       owner    group    other
+//           access:     R W X    R W X    R W X
+//           bit:        8 7 6    5 4 3    2 1 0
+
+// (This is accomplished by adding the flags below to get the mode)
+//*********************************************************************
+//                                         owner authority
+dcl-c S_IRUSR    256;
+dcl-c S_IWUSR    128;
+dcl-c S_IXUSR    64;
+dcl-c S_IRWXU    448;
+//                                         group authority
+dcl-c S_IRGRP    32;
+dcl-c S_IWGRP    16;
+dcl-c S_IXGRP    8;
+dcl-c S_IRWXG    56;
+//                                         other people
+dcl-c S_IROTH    4;
+dcl-c S_IWOTH    2;
+dcl-c S_IXOTH    1;
+dcl-c S_IRWXO    7;
+
+//*********************************************************************
+//  Flags for use in open()
+
+// More than one can be used -- add them together.
+//*********************************************************************
+//  00000000000000000000000000000001          Reading Only
+dcl-c O_RDONLY   1;
+//  00000000000000000000000000000010          Writing Only
+dcl-c O_WRONLY   2;
+//  00000000000000000000000000000100          Reading & Writing
+dcl-c O_RDWR     4;
+//  00000000000000000000000000001000          Create File if needed
+dcl-c O_CREAT    8;
+//  00000000000000000000000000010000          Exclusively create --
+//                                              open will fail if it
+//                                              already exists.
+dcl-c O_EXCL     16;
+//  00000000000000000000000000100000          Assign a CCSID to new
+//                                            file.
+dcl-c O_CCSID    32;
+//  00000000000000000000000001000000          Truncate file to 0 bytes
+dcl-c O_TRUNC    64;
+//  00000000000000000000000100000000          Append to file
+//                                            (write data at end only)
+dcl-c O_APPEND   256;
+//  00000000000000000000010000000000          Synchronous write
+dcl-c O_SYNC     1024;
+//  00000000000000000000100000000000          Sync write, data only
+dcl-c O_DSYNC    2048;
+//  00000000000000000001000000000000          Sync read
+dcl-c O_RSYNC    4096;
+//  00000000000000001000000000000000          No controlling terminal
+dcl-c O_NOCTTY   32768;
+//  00000000000000010000000000000000          Share with readers only
+dcl-c O_SHARE_RDONLY 65536;
+//  00000000000000100000000000000000          Share with writers only
+dcl-c O_SHARE_WRONLY 131072;
+//  00000000000001000000000000000000          Share with read & write
+dcl-c O_SHARE_RDWR 262144;
+//  00000000000010000000000000000000          Share with nobody.
+dcl-c O_SHARE_NONE 524288;
+//  00000000100000000000000000000000          Assign a code page
+dcl-c O_CODEPAGE 8388608;
+//  00000001000000000000000000000000          Open in text-mode
+dcl-c O_TEXTDATA 16777216;
+/if defined(*V5R2M0)
+//  00000010000000000000000000000000          Allow text translation
+//                                            on newly created file.
+// Note: O_TEXT_CREAT requires all of the following flags to work:
+//           O_CREAT+O_TEXTDATA+(O_CODEPAGE or O_CCSID)
+dcl-c O_TEXT_CREAT 33554432;
+/endif
+//  00001000000000000000000000000000          Inherit mode from dir
+dcl-c O_INHERITMODE 134217728;
+//  00100000000000000000000000000000          Large file access
+//                                            (for >2GB files)
+dcl-c O_LARGEFILE 536870912;
+
+//--------------------------------------------------------------------
+// Close a file
+
+// int close(int fildes)
+
+// Note:  Because the same close() API is used for IFS, sockets,
+//        and pipes, it's conditionally defined here.  If it's
+//        done the same in the sockets & pipe /copy members,
+//        there will be no conflict.
+//--------------------------------------------------------------------
+/if not defined(CLOSE_PROTOTYPE)
+dcl-pr close like(INTEGER_t) extproc('close');
+  fildes         like(INTEGER_t)    value;
+end-pr;
+/define CLOSE_PROTOTYPE
+/endif
+
+//--------------------------------------------------------------------
+// Open a File
+// int open(const char *path, int oflag, . . .);
+//--------------------------------------------------------------------
+dcl-pr open like(INTEGER_t) extproc('open');
+  path           pointer    value options(*string);
+  openflags      like(INTEGER_t)    value;
+  mode           like(UNSIGNED_INTEGER_t)    value options(*nopass);
+  ccsid          like(UNSIGNED_INTEGER_t)    value options(*nopass);
+/if defined(*V5R2M0)
+  txtcreatid     like(UNSIGNED_INTEGER_t)    value options(*nopass);
+end-pr;
+/endif
+
+//--------------------------------------------------------------------
+// Read From a File
+
+// ssize_t read(int fildes, void *buffer, size_t bytes);
+//--------------------------------------------------------------------
+dcl-pr read like(INTEGER_t) extproc('read');
+  fildes         like(INTEGER_t)    value;
+  buf            pointer    value;
+  bytes          like(UNSIGNED_INTEGER_t)    value;
+end-pr;
+
+//--------------------------------------------------------------------
+// Remove Link to File.  (Deletes Directory Entry for File, and if
+//    this was the last link to the file data, the file itself is
+//    also deleted)
+
+// int unlink(const char *path)
+//--------------------------------------------------------------------
+dcl-pr unlink like(INTEGER_t) extproc('unlink');
+  path           pointer    value options(*string);
+end-pr;
+
+//--------------------------------------------------------------------
+// Write to a file
+
+// ssize_t write(int fildes, const void *buf, size_t bytes)
+//--------------------------------------------------------------------
+dcl-pr write like(INTEGER_t) extproc('write');
+  fildes         like(INTEGER_t)    value;
+  buf            pointer    value;
+  bytes          like(UNSIGNED_INTEGER_t)    value;
+end-pr;
+
+///
+// Return the CCSID for the given stream file.
+//
+// IFS_error() will be set if an error occurs.
+//
+// @param The stream file name.
+// @return The stream file CCSID.
+///
+
+dcl-pr IFS_stmf_ccsid like(UNSIGNED_SMALLINT_t);
+  stmf like(STMF_t) const;
+end-pr;
+
+///
+// Save a string to the IFS.
+//
+// @param The UTF-8 string to save.
+// @param The stream file name.
+// @return Boolean indicating success.
+///
+
+dcl-pr IFS_save_string like(BOOLEAN_t);
+  str  like(STRING_t) ccsid(*utf8) value;
+  stmf like(STMF_t) const;
+end-pr;

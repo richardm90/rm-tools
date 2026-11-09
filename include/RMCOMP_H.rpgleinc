@@ -1,0 +1,3 @@
+**free
+ctl-opt option(*nodebugio:*noexpdds:*noext:*nounref:*noshowcpy:*noshowskp:*srcstmt);
+/define RMCOMP_H
