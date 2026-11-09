@@ -24,19 +24,16 @@ ctl-opt text('RMTOOLS: IBM i Job Helper Module');
 /include 'include/RMPASE_D.rpgleinc'
 /include 'include/RMSTRING_D.rpgleinc'
 
-// Matches rm-sc's own SCQRY.SQLRPGLE SET OPTION exactly - this module
-// becomes embedded-SQL (.sqlrpgle, converted from .rpgle) only because
-// JOB_get_envvars' ported helpers need QSYS2.OUTPUT_QUEUE_ENTRIES_BASIC
-// to locate the DSPJOB spooled file; every other proc in this module is
-// unchanged.
+// This module is embedded SQL only because JOB_get_envvars' helpers need
+// QSYS2.OUTPUT_QUEUE_ENTRIES_BASIC to locate the DSPJOB spooled file; no
+// other procedure here uses SQL.
 exec sql SET OPTION COMMIT = *NONE, CLOSQLCSR = *ENDMOD, DATFMT = *ISO;
 
 // Bare libc extproc, used only by JOB_get_envvars below. Declared here,
 // in this module's top-level declarations area, not between procedures -
 // MEASURED: a dcl-pr placed between two dcl-proc/end-proc blocks is
 // rejected (RNF0256 "Specification found between procedures", RNF7030
-// "name not defined" at every call site). Ported from rm-sc's
-// SCQRY.SQLRPGLE, which declares it at the same top-level position.
+// "name not defined" at every call site).
 dcl-pr c_fflush int(10) extproc('fflush');
   stream pointer value;
 end-pr;
@@ -189,8 +186,7 @@ end-proc;
 // highest_qpdspjob_number
 //
 // The highest existing QPDSPJOB FILE_NUMBER right now, or 0 if there is
-// none - a "before" snapshot (see find_new_qpdspjob below). Ported from
-// rm-sc's SCQRY.SQLRPGLE unchanged.
+// none - a "before" snapshot (see find_new_qpdspjob below).
 //==============================================================================
 
 dcl-proc highest_qpdspjob_number;
@@ -215,7 +211,7 @@ end-proc;
 //==============================================================================
 // find_new_qpdspjob
 //
-// MEASURED (rm-sc, 5 October 2026), ported here unchanged: the spooled
+// MEASURED (5 October 2026): the spooled
 // file DSPJOB produces is NOT reliably owned by the calling job - every
 // OUTPUT(*PRINT) QPDSPJOB entry observed there, across many separate
 // jobs, carried the SAME JOB_NAME (a long-lived job that was neither the
@@ -278,7 +274,7 @@ end-proc;
 // several physical lines is wrapped chunk by chunk, not once end to end -
 // a genuine multi-line value carries a closing quote on its first line
 // and a fresh opening quote on its continuation, not one quote pair
-// spanning both. Ported from rm-sc's SCQRY.SQLRPGLE unchanged.
+// spanning both.
 //==============================================================================
 
 dcl-proc value_chunk;
@@ -325,7 +321,7 @@ end-proc;
 //
 // true when the NAME field (columns 2 to value_col-1) is all blank, which
 // is how a continuation line of a wrapped value is told apart from a new
-// entry. Ported from rm-sc's SCQRY.SQLRPGLE unchanged.
+// entry.
 //==============================================================================
 
 dcl-proc name_column_blank;
@@ -348,10 +344,9 @@ end-proc;
 //
 // The position of the first CR or LF in text, whichever comes first, or 0
 // if neither appears. Both are checked rather than assuming one - a
-// converted report's own line ending is NOT consistently CRLF (MEASURED,
-// rm-sc: CRLF via a shell `cat -A`, but CR with no LF at all from the
-// exact same CPYSPLF+iconv pipeline called from a compiled test). Ported
-// from rm-sc's SCQRY.SQLRPGLE unchanged.
+// converted report's own line ending is NOT consistently CRLF (MEASURED:
+// CRLF via a shell `cat -A`, but CR with no LF at all from the exact same
+// CPYSPLF+iconv pipeline called from a compiled test).
 //==============================================================================
 
 dcl-proc first_line_end;
@@ -386,7 +381,6 @@ end-proc;
 // multi-page report, but "Environment variables" does not - so this and
 // the header check are never gated on "only before the first header", or
 // a second page's own repeated banner/header lines get mistaken for data.
-// Ported from rm-sc's SCQRY.SQLRPGLE unchanged.
 //==============================================================================
 
 dcl-proc parse_envvar_report;
@@ -494,8 +488,7 @@ end-proc;
 //==================================================================================================
 // JOB_get_envvars
 //   Read a job's LIVE environment variables by scraping DSPJOB OPTION(*ENVVAR)
-//   OUTPUT(*PRINT) - ported from rm-sc's SCQRY_job_envvars (QRPGLESRC/SCQRY.SQLRPGLE)
-//   unchanged in mechanism. There is no QSYS2 service exposing another job's
+//   OUTPUT(*PRINT). There is no QSYS2 service exposing another job's
 //   environment (QSYS2.ENVIRONMENT_VARIABLE_INFO has no JOB_NAME column).
 //==================================================================================================
 
@@ -525,7 +518,7 @@ dcl-proc JOB_get_envvars export;
   clear env;
   err = '';
 
-  // MEASURED (rm-sc, 6 October 2026), ported here unchanged: without
+  // MEASURED (6 October 2026): without
   // this, a caller whose own first write to either stream happens AFTER
   // this procedure's internal DSPJOB round trip gets NO output at all
   // afterwards, on EITHER stream, under some invocation paths. An early
@@ -537,7 +530,7 @@ dcl-proc JOB_get_envvars export;
 
   // Forced HELD before anything else runs, so the spooled file this is
   // about to generate can never print to a real printer on a profile
-  // with one configured as default (MEASURED, rm-sc: without this
+  // with one configured as default (MEASURED: without this
   // override, DSPJOB OPTION(*ENVVAR) OUTPUT(*PRINT)'s spooled file comes
   // up READY, not HELD). OVRSCOPE(*JOB): a plain OVRPRTF does not
   // survive past the call level that issued it.

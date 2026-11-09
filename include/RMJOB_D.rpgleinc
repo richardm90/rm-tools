@@ -35,11 +35,10 @@ dcl-pr JOB_extract_user like(USER_t);
 end-pr;
 
 ///
-// Matches rm-sc's own SCLAUNCH_MAX_ENV/SCDEF_ENVVAR_t shape (QPROTOSRC/
-// SCLAUNCH_D.RPGLEINC, SCDEF_D.RPGLEINC) in spirit, but deliberately a
-// SEPARATE type from RMFORK_D.rpgleinc's FORK_ENVVAR_t - that one is "what
-// you publish", this one is "what you read back", matching rm-sc's own
-// precedent of two distinct types for those two directions. RMJOB must not
+// The same 48 x varchar(512) shape as RMFORK_D.rpgleinc's FORK_MAX_ENVVARS/
+// FORK_ENVVAR_t, but deliberately a SEPARATE type - that one is "what you
+// publish", this one is "what you read back", and the two directions are
+// kept as distinct types. RMJOB must not
 // depend on RMFORK_D.rpgleinc (wrong direction - RMJOB is the lower-level,
 // general-purpose module).
 ///
@@ -57,11 +56,9 @@ end-ds;
 // Read a job's LIVE environment variables by scraping
 // DSPJOB JOB(job_name) OPTION(*ENVVAR) OUTPUT(*PRINT) - there is no QSYS2
 // service that exposes this (QSYS2.ENVIRONMENT_VARIABLE_INFO has no
-// JOB_NAME column), so this is the only route. Ported from rm-sc's
-// SCQRY_job_envvars (QRPGLESRC/SCQRY.SQLRPGLE) rather than re-derived, to
-// keep its measured edge-case fixes (multi-page reports, inconsistent line
-// endings, spooled-file ownership, forced HOLD). It lives here as a real,
-// reusable rm-tools capability rather than test-only support code.
+// JOB_NAME column), so this is the only route. The scrape handles several
+// measured edge cases: multi-page reports, inconsistent line endings,
+// spooled-file ownership and a forced HOLD.
 //
 // @param the job to read, as number/user/name (like JOB_full_job_name's
 //          own return shape - pass that directly for the current job)

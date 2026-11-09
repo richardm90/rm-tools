@@ -3,22 +3,21 @@
 //==============================================================================
 // RMFORKIT.TEST - integration suite for FORK_run_cmd.
 //
-// NOT part of the fast RMTOOLS suite. Compile and run this ONLY against a
-// SEPARATE library, RMTOOLSIT - never swept in by a routine RUCALLTST against
-// RMTOOLS - and ONLY by deliberate, explicit, by-name invocation (a
-// documented pre-release step, not an automatic build/CI step):
+// NOT one of the fast unit suites. Run it ONLY by deliberate, explicit,
+// by-name invocation (a pre-release step, not an automatic build/CI step),
+// with RMFORK's native helper deployed by a build of this checkout.
+// <objlib> is the library rm-tools was built into:
 //
 //   ADDLIBLE RPGUNIT
-//   ADDLIBLE RMTOOLSIT
-//   ADDLIBLE RMTOOLS
-//   RUCRTRPG SRCSTMF('<checkout>/qtestsrc/RMFORKIT.TEST.RPGLE')
-//            TSTPGM(RMTOOLSIT/RMFORKIT) TGTCCSID(*JOB) DBGVIEW(*SOURCE)
+//   ADDLIBLE <objlib>
+//   RUCRTRPG SRCSTMF('<checkout>/tests/RMFORKIT.TEST.RPGLE')
+//            TSTPGM(<objlib>/TRMFORKIT) TGTCCSID(*JOB) DBGVIEW(*SOURCE)
 //            RPGPPOPT(*LVL2) INCDIR('<checkout>')
-//   RUCALLTST TSTPGM(RMTOOLSIT/RMFORKIT) ORDER(*API) LIBL(*CURRENT)
+//   RUCALLTST TSTPGM(<objlib>/TRMFORKIT) ORDER(*API) LIBL(*CURRENT)
 //             JOBD(*DFT) DETAIL(*BASIC) OUTPUT(*ALLWAYS) RCLRSC(*NO)
 //             ONFAILURE(*CONTINUE)
 //
-// WHY THIS IS A SEPARATE SUITE, NOT PART OF RMTOOLS: every test here calls
+// WHY THIS IS A SEPARATE SUITE: every test here calls
 // the real, exported FORK_run_cmd - not FORK_build_cmdline - so every
 // "happy" case here genuinely forks a real PASE process via the deployed
 // native binary (FORK_NATIVE_PATH). That is an unsafe, non-deterministic
@@ -225,9 +224,8 @@ dcl-proc test_fork_overwrite_semantics_second_value_wins export;
 end-proc;
 
 ///
-// Scenario 3: forced fork failure (out-of-range resourceid, the same
-// 999999999 value rm-sc's own rmsc_fork_helper.c and a direct invocation
-// of this project's binary both measured failing reliably). Must return
+// Scenario 3: forced fork failure (out-of-range resourceid 999999999,
+// measured failing reliably on a direct invocation of the binary). Must return
 // a distinct rc (the native binary's documented exit code 2 - f_fork400()
 // itself failed) and no job must ever appear under the requested name -
 // confirming a failed fork leaves nothing half-created, through the REAL

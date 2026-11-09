@@ -109,10 +109,19 @@ maintained locally and deployed to the IBM i for the build. `iproj.json`'s
 
 ### Tests
 
-The RPGUnit suites in `qtestsrc/` are compiled by the IBM i Testing extension into the
+The RPGUnit suites in `tests/` are compiled by the IBM i Testing extension into the
 `RMTOOLS` library (see `.vscode/testing.json`); they bind the modules under test through
 `RMTOOLS`. `RMFORKIT.TEST` is an integration suite that really forks PASE jobs and needs the
 native helper deployed.
+
+[iRPGUnit](https://github.com/tools-400/irpgunit) is needed only for developing rm-tools or
+running these suites - not for building the library, so `iproj.json` deliberately leaves it off
+the build's library list. To work on rm-tools, install it (Code for IBM i - *Components* - *Add
+Component* - RPGUnit) and add its library to `postUsrlibl` in your local `iproj.json`:
+
+```json
+"postUsrlibl": ["QGPL", "QTEMP", "RPGUNIT"],
+```
 
 ## Troubleshooting
 

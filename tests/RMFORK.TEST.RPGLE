@@ -12,7 +12,7 @@
 // early-rejection (overflow) path, where PASE_run_cmd is never reached.
 // Everything past that hand-off (the real fork/exec, DSPJOB OPTION(*ENVVAR)
 // checks) has no RPGUnit seam here and is covered instead by the RMFORKIT
-// integration suite (qtestsrc/RMFORKIT.TEST.RPGLE).
+// integration suite (tests/RMFORKIT.TEST.RPGLE).
 //==============================================================================
 
 ctl-opt nomain;
@@ -35,9 +35,9 @@ end-proc;
 ///
 // shell_quote - a value containing an embedded space must come back as ONE
 // shell word, not split - this is the specific case FORK_run_cmd exists
-// to handle with no special escaping from the caller's side (RMSC's own
-// shell-prefix approach needed careful quoting here; this is the point of
-// building FORK_run_cmd at all).
+// to handle with no special escaping from the caller's side (a hand-built
+// shell prefix needs careful quoting here; this is the point of building
+// FORK_run_cmd at all).
 ///
 
 dcl-proc test_shell_quote_embedded_space export;
@@ -109,7 +109,7 @@ end-proc;
 
 ///
 // FORK_build_cmdline - every envvars entry actually ends up in the
-// assembled line, quoted, in order - the actual contract RMSC depends on.
+// assembled line, quoted, in order - the actual contract callers depend on.
 ///
 
 dcl-proc test_build_cmdline_multiple_envvars_included export;

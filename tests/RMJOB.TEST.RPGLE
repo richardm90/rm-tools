@@ -2,14 +2,11 @@
 
 //==============================================================================
 // RMJOB.TEST - RPGUnit suite for JOB_get_envvars.
-// JOB_get_envvars itself is ported from rm-sc's SCQRY_job_envvars.
 //
-// Ported from rm-sc/qtestsrc/SCQRY.TEST.RPGLE's test_job_envvars_job_not_found/
-// test_job_envvars_own_job_env/test_job_envvars_long_value_not_split.
-// test_job_get_envvars_own_job_env's fixture technique
-// (stage known values on the CURRENT job via ENVVAR_put, already in rm-tools'
-// RMENVVAR.rpgle) is why this belongs in the fast RMTOOLS suite, not the slow
-// RMTOOLSIT integration one - no forking involved anywhere in this file.
+// test_job_get_envvars_own_job_env's fixture technique (stage known values
+// on the CURRENT job via ENVVAR_put, from RMENVVAR.rpgle) is why this is a
+// fast unit suite rather than part of the slow RMFORKIT integration suite -
+// no forking is involved anywhere in this file.
 //==============================================================================
 
 ctl-opt nomain;
@@ -27,7 +24,7 @@ dcl-c OWN_VALUE const('rmjob-own-job-env-probe');
 
 ///
 // A filler value of exactly len characters, built rather than written out
-// literally - matches rm-sc's own qe_long_value.
+// literally.
 ///
 
 dcl-proc long_value;

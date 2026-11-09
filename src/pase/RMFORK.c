@@ -4,12 +4,10 @@
  * Publishes a list of "NAME=VALUE" environment variables into a genuinely
  * forked, explicitly-named job (not spawn()'d) and execs <cmd> in it - so
  * DSPJOB OPTION(*ENVVAR) sees them on the job the caller asked for, which
- * rm-tools' own spawn()-based PASE_run_cmd (RMPASE.rpgle) cannot give, for
- * the same reason rm-sc's native/rmsc_fork_helper.c exists: f_fork400() is
- * PASE-only and cannot be called from ILE RPG or ILE C. This file is that
- * same ancestor, extended - see rm-sc/native/rmsc_fork_helper.c for the
- * original, and rm-sc/docs/tobi-binding.md for how a file like this is
- * built under TOBi (src/pase/Rules.mk here).
+ * rm-tools' own spawn()-based PASE_run_cmd (RMPASE.rpgle) cannot give. It
+ * has to be a separate native PASE binary because f_fork400() is PASE-only
+ * and cannot be called from ILE RPG or ILE C. src/pase/Rules.mk explains
+ * how it is built under TOBi.
  *
  * ARGV SHAPE (external, phase 1) - the exact contract src/helpers/rmbase/
  * RMFORK.rpgle's FORK_build_cmdline assembles against. This binary is
@@ -30,8 +28,8 @@
  *   argv[3+nvars+1]    OPTIONAL resourceid, decimal, f_fork400()'s own
  *                       parameter - 0/absent lets the OS choose. An
  *                       out-of-range value is also the cleanest known way
- *                       to force f_fork400() to fail on demand (MEASURED,
- *                       rmsc_fork_helper.c: 999999999 fails reliably).
+ *                       to force f_fork400() to fail on demand (MEASURED:
+ *                       999999999 fails reliably).
  *   argv[3+nvars+2]    OPTIONAL keep_stdio, the literal 0 or 1 (anything
  *                       else is exit 1); only valid after resourceid
  *                       (positional). Absent == 0.
@@ -43,7 +41,7 @@
  * data, mutexes and locks are all undefined in the child process" until
  * exec). That is only safe while the parent is a disposable process; a
  * caller that ran this in its own long-lived job would have its own
- * environment modified. RMSC's selfexec probe (MEASURED) showed
+ * environment modified. A self-exec probe (MEASURED) showed
  * Qp2setenv_ile() DOES work in the child once the child has done an
  * intermediate exec, with the parent never touching it. So:
  *
@@ -109,7 +107,7 @@
  *       phase-2 argv, via the record; essentially unreachable).
  *   2   pipe() or f_fork400() failed - f_fork400() returns -1 on failure,
  *       NOT 0 (the child's value); checked as pid < 0, not pid != 0, which
- *       was an actual historical bug in rmsc_fork_helper.c's predecessor.
+ *       was an actual historical bug in an earlier fork helper.
  *   3   Qp2setenv_ile() failed (distinct from 2, so the two failures can
  *       be told apart). SEMANTIC SHIFT in v2.3.0: it now happens in the
  *       child after a successful fork, so a job named <jobname> briefly
@@ -130,8 +128,7 @@
 #include <string.h>
 #include <unistd.h>
 
-/* Not <stdlib.h>'s strtoul()/getenv() - MEASURED in rmsc_fork_helper.c and
-   reconfirmed directly here for getenv() too: <stdlib.h>'s own include
+/* Not <stdlib.h>'s strtoul()/getenv() - MEASURED for both: <stdlib.h>'s own include
    chain conflicts with as400_protos.h's sigset_t definition on this box.
    A plain decimal parser avoids the whole header for nvars/resourceid;
    a bare prototype does the same for the one getenv() call below. */

@@ -24,9 +24,10 @@
 // Constants definitions
 ///
 
-// Matches rm-sc's own SCLAUNCH_MAX_ENV (QPROTOSRC/SCLAUNCH_D.RPGLEINC) -
-// deliberate, not a coincidence, so rm-sc's env.entry(i) array can pass
-// straight through to FORK_run_cmd with no reformatting in either direction.
+// Part of FORK_run_cmd's interface: together with FORK_ENVVAR_t's 512, a
+// caller can hold its environment as an array of 48 x varchar(512) and pass
+// it straight through with no reformatting. Changing either is a breaking
+// change for such callers.
 dcl-c FORK_MAX_ENVVARS const(48);
 
 // The one, global, version-shared location every rm-tools install on a box
@@ -51,8 +52,8 @@ dcl-c FORK_RC_CMDLINE_TOO_LONG const(-1);
 // (via f_fork400), not one it's reading back from the running job.
 dcl-s FORK_JOBNAME_t char(10) template;
 
-// A single, pre-formatted "NAME=VALUE" environment variable entry - matches
-// rm-sc's own SCDEF_ENVVAR_t (QPROTOSRC/SCDEF_D.RPGLEINC) exactly, varchar(512).
+// A single, pre-formatted "NAME=VALUE" environment variable entry,
+// varchar(512) - see FORK_MAX_ENVVARS before changing the length.
 // Deliberately NOT a name/value pair DS: entries are handed to the native
 // binary, and on to Qp2setenv_ile(), already formed, with no reformatting.
 dcl-s FORK_ENVVAR_t varchar(512) template;
