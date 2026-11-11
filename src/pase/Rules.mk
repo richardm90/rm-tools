@@ -29,9 +29,13 @@
 # line (MEASURED - it expands to empty); TOBi's own $(OBJLIB) does. The
 # recipe is one shell command (joined with \) so the path, held in a shell
 # variable, is still set on every step.
-# Paths are named with their prefix from the project root (src/pase/...,
-# include/...) because a custom recipe's commands run from the project
-# root, not from this directory.
+# The recipe names its files only through $< (RMFORK.c) and $(lastword $^)
+# (RMFORK_D), never literally: its commands run from the root of whichever
+# project is building - rm-tools' own, or a consumer's that builds rm-tools
+# as a subdirectory (e.g. a submodule at deps/rm-tools) - and TOBi rewrites
+# the prerequisites relative to that root (MEASURED: src/pase/RMFORK.c here,
+# deps/rm-tools/src/pase/RMFORK.c from a consumer). A literal path works in
+# only one of the two.
 #
 # The recipe creates the <release>/bin directories, but NOT
 # /QOpenSys/opt/rm-tools itself - creating that is a one-time installation
@@ -44,9 +48,9 @@
 # or the deployed binary's mtime, not just the banner. A failed step stops
 # the recipe before the data area is recreated, so the next build retries.
 RMFORK.DTAARA: src/pase/RMFORK.c include/RMFORK_D.rpgleinc
-	P=$$(sed -n "s/^dcl-c FORK_NATIVE_PATH const('\(.*\)');.*$$/\1/p" include/RMFORK_D.rpgleinc) && \
+	P=$$(sed -n "s/^dcl-c FORK_NATIVE_PATH const('\(.*\)');.*$$/\1/p" "$(lastword $^)") && \
 	test -n "$$P" && \
 	mkdir -p "$${P%/rmfork}" && \
-	/QOpenSys/pkgs/bin/cc -DRMFORK_DEPLOYED_PATH="\"$$P\"" -o "$$P" src/pase/RMFORK.c && \
+	/QOpenSys/pkgs/bin/cc -DRMFORK_DEPLOYED_PATH="\"$$P\"" -o "$$P" "$<" && \
 	{ system "DLTDTAARA DTAARA($(OBJLIB)/RMFORK)" >/dev/null 2>&1 ; true ; } && \
 	system "CRTDTAARA DTAARA($(OBJLIB)/RMFORK) TYPE(*CHAR) LEN(64) VALUE('$$P') TEXT('rm-tools: rmfork native helper build stamp')"
