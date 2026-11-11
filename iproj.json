@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "description": "rm-tools: RPGLE helper modules for IBM i",
+  "description": "RMTOOLS: RPGLE helper modules for IBM i",
   "objlib": "&OBJLIB",
   "curlib": "&OBJLIB",
   "includePath": ["."],
