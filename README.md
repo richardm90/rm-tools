@@ -58,17 +58,21 @@ yum install tobi gcc-6
 # by everyone (it may hold other products' directories too).
 [ -d /QOpenSys/opt ] || { mkdir /QOpenSys/opt && chmod 755 /QOpenSys/opt; }
 
-# The directory RMFORK's native helper is deployed to. The build writes
-# /QOpenSys/opt/rm-tools/bin/rmfork but does not create the directory.
-mkdir -p /QOpenSys/opt/rm-tools/bin
-# - only the owner can add or remove entries here; everyone else can look
-chmod 2755 /QOpenSys/opt/rm-tools
-# - the group of the profile that runs the build can deploy the binary
-chgrp qpgmr /QOpenSys/opt/rm-tools/bin
-chmod 2775 /QOpenSys/opt/rm-tools/bin
+# The directory RMFORK's native helper is deployed under. Each build creates
+# its release's own <release>/bin directory here (for example
+# /QOpenSys/opt/rm-tools/1.0.0/bin/rmfork), so the group of the profile
+# that runs the build must be able to add entries.
+mkdir -p /QOpenSys/opt/rm-tools
+chgrp qpgmr /QOpenSys/opt/rm-tools
+chmod 2775 /QOpenSys/opt/rm-tools
 ```
 
 Use the group of whichever profile will run `makei build` in place of `qpgmr`.
+
+Every release deploys its native helper to a directory of its own, so releases can be installed
+side by side and each program calls the helper from the release it was built with. A release's
+directory is not needed once nothing built from that release is in use; remove it by hand with
+`rm -r /QOpenSys/opt/rm-tools/<release>`.
 
 ### Build
 
@@ -95,8 +99,9 @@ makei build -e OBJLIB=RMTOOLS
    the build job's library list, or qualify the entry. An unqualified `RMTOOLS` resolves to the
    first one on the library list, so keep any other library holding an `RMTOOLS` binding
    directory (such as the private rmtools build, which binds `RMBASE` by reference) off it.
-3. If you call `FORK_run_cmd`, the target system needs `/QOpenSys/opt/rm-tools/bin/rmfork`
-   deployed by an rm-tools build.
+3. If you call `FORK_run_cmd`, the target system needs the native helper for the rm-tools
+   release you built with, `/QOpenSys/opt/rm-tools/<release>/bin/rmfork`, deployed by an
+   rm-tools build of that release.
 
 [rm-sc](https://github.com/richardm90/rm-sc) is a working example.
 
@@ -106,6 +111,13 @@ Developed with the [Code for IBM i](https://codefori.github.io/docs/) VS Code ex
 maintained locally and deployed to the IBM i for the build. `iproj.json`'s
 `buildCommand`/`compileCommand` drive the Project Explorer's **Build** and **Compile** actions, and
 `.vscode/actions.json` has equivalent Code for IBM i actions.
+
+### Releasing
+
+The release number appears in the code in one place only: `FORK_NATIVE_PATH` in
+`include/RMFORK_D.rpgleinc` (`/QOpenSys/opt/rm-tools/<release>/bin/rmfork`). The build reads it
+from there to decide where to deploy RMFORK's native helper. Update it, and `CHANGES.md`, for
+every release.
 
 ### Tests
 

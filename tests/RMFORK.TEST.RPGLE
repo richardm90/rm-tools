@@ -340,7 +340,10 @@ end-proc;
 
 ///
 // v2.2.0 baseline text, assembled by hand (not via shell_quote), so these
-// tests pin the exact bytes rather than echoing the implementation.
+// tests pin the exact bytes rather than echoing the implementation. The
+// path itself comes from FORK_NATIVE_PATH, which changes with every
+// release; it contains no quote characters, so wrapping it by hand is
+// still exact.
 ///
 
 dcl-proc q22;
@@ -348,7 +351,7 @@ dcl-proc q22;
     tail varchar(100) const;
   end-pi;
 
-  return '''/QOpenSys/opt/rm-tools/bin/rmfork'' ''TESTJOB01'' ' + tail;
+  return '''' + FORK_NATIVE_PATH + ''' ''TESTJOB01'' ' + tail;
 end-proc;
 
 dcl-proc test_build_cmdline_v220_none_byte_identical export;

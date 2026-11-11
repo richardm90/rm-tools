@@ -10,11 +10,12 @@
  * how it is built under TOBi.
  *
  * ARGV SHAPE (external, phase 1) - the exact contract src/helpers/rmbase/
- * RMFORK.rpgle's FORK_build_cmdline assembles against. This binary is
- * deployed ONCE, globally, per box (it cannot live in a QSYS library, so
- * every rm-tools install on a box shares it), so this argv shape and the
- * exit codes below are a stable ABI and stay backward compatible: a
- * v2.2.0-built caller works unchanged.
+ * RMFORK.rpgle's FORK_build_cmdline assembles against. Each rm-tools release
+ * deploys its own copy of this binary, to /QOpenSys/opt/rm-tools/<release>/
+ * bin/rmfork (FORK_NATIVE_PATH in include/RMFORK_D.rpgleinc), so a caller
+ * always runs the binary from its own release. Keep this argv shape and the
+ * exit codes below backward compatible anyway, so that a caller can be
+ * pointed at a newer release's binary if ever needed.
  *   argv[1]            jobname. The literal "--phase2" is reserved for this
  *                       binary's own internal re-exec (below) and can never
  *                       be a valid job name (hyphen is not valid in one).
@@ -233,8 +234,13 @@ cmd_first_word_is_executable(const char *cmd)
 #define RMFORK_PIPE_FD 63
 
 /* Deployed location, used to re-exec when argv[0] has no '/' in it (a bare
-   name found via $PATH cannot be execv()'d by name). */
-#define RMFORK_DEPLOYED_PATH "/QOpenSys/opt/rm-tools/bin/rmfork"
+   name found via $PATH cannot be execv()'d by name). Supplied by the build
+   (src/pase/Rules.mk passes -DRMFORK_DEPLOYED_PATH, read from
+   FORK_NATIVE_PATH in include/RMFORK_D.rpgleinc) so it is never out of step
+   with the release the binary is deployed for. */
+#ifndef RMFORK_DEPLOYED_PATH
+#error "Build with -DRMFORK_DEPLOYED_PATH=... - see src/pase/Rules.mk"
+#endif
 
 /* The failure record written to the pipe; zero bytes read == success. */
 struct rmfork_rec {

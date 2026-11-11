@@ -30,12 +30,19 @@
 // change for such callers.
 dcl-c FORK_MAX_ENVVARS const(48);
 
-// The one, global, version-shared location every rm-tools install on a box
-// calls - a deliberate limitation rather than an oversight. A PASE binary
-// cannot live in a QSYS library, and bind-by-copy erases any runtime way to
-// tell which OBJLIB built the caller, so all installs share one binary;
-// its argv shape and exit codes are therefore kept backward compatible.
-dcl-c FORK_NATIVE_PATH const('/QOpenSys/opt/rm-tools/bin/rmfork');
+// Where this release's native binary is deployed: one directory per rm-tools
+// release, so several releases can be installed side by side and a caller
+// always runs the binary built from the same release as the RMFORK module
+// bound into it. A PASE binary cannot live in a QSYS library, and
+// bind-by-copy leaves no runtime way to tell which OBJLIB built the caller,
+// so the release has to be in the path itself.
+//
+// The ONLY place the release number is written: src/pase/Rules.mk reads
+// this line to decide where to deploy the binary and compiles the same path
+// into it. Change the release number here, and only here, on every release.
+// Keep the line's shape (a single-line dcl-c with a literal) - the build
+// reads it with sed.
+dcl-c FORK_NATIVE_PATH const('/QOpenSys/opt/rm-tools/1.0.0/bin/rmfork');
 
 // FORK_run_cmd's own rc range when it never reached PASE_run_cmd at all (the
 // PASE_CMD_SIZE overflow guard) - negative, so it can never

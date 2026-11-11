@@ -11,6 +11,7 @@ First public release, extracted from the private `rmtools` project at its v2.3.0
 - **Binding:** no service program. Consumers bind the modules by copy through the
   `RMTOOLS` binding directory, whose entries are now all `*MODULE` (in rmtools it held the
   `RMBASE` service program, bound by reference).
-- **RMFORK:** the native helper is now deployed to `/QOpenSys/opt/rm-tools/bin/rmfork`
-  (was `/QOpenSys/opt/rmtools/bin/rmfork`).
+- **RMFORK:** the native helper is now deployed to a directory per release,
+  `/QOpenSys/opt/rm-tools/<release>/bin/rmfork` (was `/QOpenSys/opt/rmtools/bin/rmfork`), so
+  releases can be installed side by side.
 - **Tests:** `RMJOB.TEST`, `RMFORK.TEST` and `RMFORKIT.TEST` bind through `RMTOOLS`.
