@@ -24,19 +24,21 @@ ctl-opt text('RMTOOLS: IBM i Job Helper Module');
 /include 'include/RMPASE_D.rpgleinc'
 /include 'include/RMSTRING_D.rpgleinc'
 
-// This module is embedded SQL only because JOB_get_envvars' helpers need
-// QSYS2.OUTPUT_QUEUE_ENTRIES_BASIC to locate the DSPJOB spooled file; no
-// other procedure here uses SQL.
-exec sql SET OPTION COMMIT = *NONE, CLOSQLCSR = *ENDMOD, DATFMT = *ISO;
-
-// Bare libc extproc, used only by JOB_get_envvars below. Declared here,
-// in this module's top-level declarations area, not between procedures -
-// MEASURED: a dcl-pr placed between two dcl-proc/end-proc blocks is
-// rejected (RNF0256 "Specification found between procedures", RNF7030
-// "name not defined" at every call site).
-dcl-pr c_fflush int(10) extproc('fflush');
-  stream pointer value;
-end-pr;
+// QSPRILSP format SPRL0100 - see last_spooled_file. Declared here because
+// a dcl-ds cannot sit between procedures.
+dcl-ds SPLF_ID_t qualified template;
+  bytes_returned  int(10);
+  bytes_available int(10);
+  name            char(10);
+  job_name        char(10);
+  job_user        char(10);
+  job_number      char(6);
+  number          int(10);
+  system_name     char(8);
+  create_date     char(7);
+  reserved        char(1);
+  create_time     char(6);
+end-ds;
 
 //==============================================================================
 // JOB_ccsid
@@ -183,84 +185,49 @@ dcl-proc JOB_extract_user export;
 end-proc;
 
 //==============================================================================
-// highest_qpdspjob_number
+// last_spooled_file
 //
-// The highest existing QPDSPJOB FILE_NUMBER right now, or 0 if there is
-// none - a "before" snapshot (see find_new_qpdspjob below).
+// The identity of the spooled file this job most recently created, from
+// the Retrieve Identity of Last Spooled File Created (QSPRILSP) API,
+// format SPRL0100. Blank when the job has not created one yet (the API's
+// error is swallowed, not signalled).
+//
+// MEASURED: DSPJOB OUTPUT(*PRINT)'s spooled file is NOT owned by the job
+// that ran DSPJOB - it goes to the user's QPRTJOB job (e.g.
+// 040645/RICHARD/QPRTJOB), and spooled file numbers are counted per job.
+// QSPRILSP still reports it correctly, so it is the only lookup used:
+// nothing searches output queues, and no other user's spooled files can
+// be mistaken for this call's.
 //==============================================================================
 
-dcl-proc highest_qpdspjob_number;
-  dcl-pi *n like(INTEGER_t);
+dcl-proc last_spooled_file;
+  dcl-pi *n likeds(SPLF_ID_t);
   end-pi;
 
-  dcl-s highest int(10);
+  dcl-pr QSPRILSP extpgm('QSPRILSP');
+    receiver     char(70);
+    receiver_len int(10) const;
+    format       char(8) const;
+    error_code   likeds(api_err);
+  end-pr;
 
-  exec sql
-    SELECT COALESCE(MAX(FILE_NUMBER), 0) INTO :highest
-      FROM QSYS2.OUTPUT_QUEUE_ENTRIES_BASIC
-     WHERE SPOOLED_FILE_NAME = 'QPDSPJOB';
+  dcl-ds api_err qualified;
+    provided  int(10) inz(%size(api_err));
+    available int(10) inz(0);
+    msgid     char(7);
+    reserved  char(1);
+    msgdata   char(64);
+  end-ds;
 
-  if sqlcode <> 0;
-    return 0;
+  dcl-ds splf likeds(SPLF_ID_t) inz;
+  dcl-s receiver char(70);
+
+  QSPRILSP(receiver: %size(receiver): 'SPRL0100': api_err);
+  if api_err.available = 0;
+    splf = receiver;
   endif;
 
-  return highest;
-
-end-proc;
-
-//==============================================================================
-// find_new_qpdspjob
-//
-// MEASURED (5 October 2026): the spooled
-// file DSPJOB produces is NOT reliably owned by the calling job - every
-// OUTPUT(*PRINT) QPDSPJOB entry observed there, across many separate
-// jobs, carried the SAME JOB_NAME (a long-lived job that was neither the
-// interactive session nor the test runner that actually issued the
-// DSPJOB call). So this does not search by job identity at all:
-// before_number is a snapshot taken immediately before the DSPJOB call,
-// and this finds the one new QPDSPJOB entry with a FILE_NUMBER greater
-// than that snapshot - identity-agnostic. Returns the entry's OWN
-// job_name (read back from the row, never assumed) alongside its
-// file_number, for CPYSPLF/DLTSPLF to target.
-//==============================================================================
-
-dcl-proc find_new_qpdspjob;
-  dcl-pi *n like(BOOLEAN_t);
-    before_number like(INTEGER_t) const;
-    job_name       like(JOB_FULL_NAME_t);
-    file_number    like(INTEGER_t);
-  end-pi;
-
-  dcl-s before_l int(10);
-  dcl-s name_l   varchar(28);
-  dcl-s number   int(10);
-
-  file_number = 0;
-  before_l = before_number;
-
-  exec sql
-    DECLARE c_dspjob_splf CURSOR FOR
-    SELECT JOB_NAME, FILE_NUMBER
-      FROM QSYS2.OUTPUT_QUEUE_ENTRIES_BASIC
-     WHERE SPOOLED_FILE_NAME = 'QPDSPJOB' AND FILE_NUMBER > :before_l
-     ORDER BY FILE_NUMBER ASC
-     FETCH FIRST 1 ROW ONLY;
-
-  exec sql OPEN c_dspjob_splf;
-  if sqlcode <> 0;
-    return false;
-  endif;
-
-  exec sql FETCH c_dspjob_splf INTO :name_l, :number;
-  if sqlcode <> 0;
-    exec sql CLOSE c_dspjob_splf;
-    return false;
-  endif;
-
-  exec sql CLOSE c_dspjob_splf;
-  job_name = name_l;
-  file_number = number;
-  return true;
+  return splf;
 
 end-proc;
 
@@ -503,8 +470,9 @@ dcl-proc JOB_get_envvars export;
   dcl-ds qerr     likeds(QCMD_ERR_t);
   dcl-s raw_path  like(STMF_t);
   dcl-s utf8_path like(STMF_t);
-  dcl-s before_number like(INTEGER_t);
-  dcl-s file_number like(INTEGER_t);
+  dcl-ds before   likeds(SPLF_ID_t);
+  dcl-ds after    likeds(SPLF_ID_t);
+  dcl-s have_splf like(BOOLEAN_t) inz(false);
   dcl-s text      like(STRING_t) ccsid(*utf8);
   // parse_envvar_report and its helpers work in the job's own CCSID, not
   // UTF-8 - the content being matched (job names, digits, quote
@@ -518,86 +486,98 @@ dcl-proc JOB_get_envvars export;
   clear env;
   err = '';
 
-  // MEASURED (6 October 2026): without
-  // this, a caller whose own first write to either stream happens AFTER
-  // this procedure's internal DSPJOB round trip gets NO output at all
-  // afterwards, on EITHER stream, under some invocation paths. An early
-  // flush (no visible byte written to anything) fixes it - the minimal,
-  // non-polluting fix, not fully understood beyond that.
-  c_fflush(*null);
-
-  before_number = highest_qpdspjob_number();
+  // What this job last created BEFORE the DSPJOB call, so a spooled file
+  // created by it can be told apart from an older one (see
+  // last_spooled_file).
+  before = last_spooled_file();
 
   // Forced HELD before anything else runs, so the spooled file this is
   // about to generate can never print to a real printer on a profile
   // with one configured as default (MEASURED: without this
   // override, DSPJOB OPTION(*ENVVAR) OUTPUT(*PRINT)'s spooled file comes
   // up READY, not HELD). OVRSCOPE(*JOB): a plain OVRPRTF does not
-  // survive past the call level that issued it.
+  // survive past the call level that issued it - so it is also removed
+  // with LVL(*JOB) below; LVL(*) does not find it ("Override not found
+  // at specified level").
   if not QCMD_exc('OVRPRTF FILE(QPDSPJOB) HOLD(*YES) OVRSCOPE(*JOB)': qerr);
     err = 'Could not force the DSPJOB spooled file to HELD status';
     return false;
   endif;
 
-  if not QCMD_exc('DSPJOB JOB(' + %trim(job_name) +
-                  ') OPTION(*ENVVAR) OUTPUT(*PRINT)': qerr);
-    // Best-effort - a DLTOVR failure here is not treated as a failure in
-    // its own right.
-    QCMD_exc('DLTOVR FILE(QPDSPJOB) LVL(*)');
+  ok = QCMD_exc('DSPJOB JOB(' + %trim(job_name) +
+                ') OPTION(*ENVVAR) OUTPUT(*PRINT)': qerr);
+  if not ok;
     err = 'Job ' + %trim(job_name) + ' could not be read';
     if qerr.count > 0;
       err += ': ' + %trim(qerr.msgs(1).text);
     endif;
-    return false;
   endif;
 
-  if not find_new_qpdspjob(before_number: owner_job: file_number);
-    QCMD_exc('DLTOVR FILE(QPDSPJOB) LVL(*)');
+  // Checked whether or not DSPJOB succeeded, so any spooled file it did
+  // create is always deleted below.
+  after = last_spooled_file();
+  have_splf = after.name = 'QPDSPJOB'
+              and (after.job_number <> before.job_number
+                   or after.job_user <> before.job_user
+                   or after.job_name <> before.job_name
+                   or after.number <> before.number
+                   or after.create_date <> before.create_date
+                   or after.create_time <> before.create_time);
+
+  if have_splf;
+    owner_job = after.job_number + '/' + %trim(after.job_user) + '/' +
+                %trim(after.job_name);
+  elseif ok;
+    ok = false;
     err = 'Could not locate the generated DSPJOB spooled file';
-    return false;
-  endif;
-
-  raw_path  = IFS_temp_filename();
-  utf8_path = IFS_temp_filename();
-
-  // CPYSPLF's TOSTMF form has no native CCSID-conversion parameter - a
-  // raw copy followed by iconv, using THIS job's own real CCSID rather
-  // than a hardcoded one, ported unchanged. JOB(owner_job): whichever
-  // job the entry actually belongs to - read back from the row itself,
-  // never assumed (see find_new_qpdspjob).
-  ok = QCMD_exc('CPYSPLF FILE(QPDSPJOB) TOFILE(*TOSTMF) JOB(' +
-                %trim(owner_job) + ') SPLNBR(' + %char(file_number) +
-                ') TOSTMF(''' + %trim(raw_path) +
-                ''') STMFOPT(*REPLACE) CTLCHAR(*NONE)': qerr);
-
-  if ok;
-    pcmd = 'iconv -f IBM-' + %char(JOB_ccsid()) + ' -t UTF-8 ' +
-           %trim(raw_path) + ' > ' + %trim(utf8_path);
-    ok = (PASE_run_cmd(*omit: pcmd: stdout) = PASE_RC_SUCCESS);
-    if not ok;
-      err = 'Could not convert the DSPJOB spooled file to text';
-    endif;
-  else;
-    err = 'Could not copy the DSPJOB spooled file to a stream file';
   endif;
 
   if ok;
-    text = IFS_read(utf8_path);
-    text_job = text;
-    ok = parse_envvar_report(text_job: env);
-    if not ok;
-      err = 'Unrecognised DSPJOB *ENVVAR report format for ' +
-            %trim(job_name);
+    raw_path  = IFS_temp_filename();
+    utf8_path = IFS_temp_filename();
+
+    // CPYSPLF's TOSTMF form has no native CCSID-conversion parameter - a
+    // raw copy followed by iconv, using THIS job's own real CCSID rather
+    // than a hardcoded one. JOB(owner_job): the job QSPRILSP says owns
+    // the spooled file, which is not this job.
+    ok = QCMD_exc('CPYSPLF FILE(QPDSPJOB) TOFILE(*TOSTMF) JOB(' +
+                  %trim(owner_job) + ') SPLNBR(' + %char(after.number) +
+                  ') TOSTMF(''' + %trim(raw_path) +
+                  ''') STMFOPT(*REPLACE) CTLCHAR(*NONE)': qerr);
+
+    if ok;
+      pcmd = 'iconv -f IBM-' + %char(JOB_ccsid()) + ' -t UTF-8 ' +
+             %trim(raw_path) + ' > ' + %trim(utf8_path);
+      ok = (PASE_run_cmd(*omit: pcmd: stdout) = PASE_RC_SUCCESS);
+      if not ok;
+        err = 'Could not convert the DSPJOB spooled file to text';
+      endif;
+    else;
+      err = 'Could not copy the DSPJOB spooled file to a stream file';
     endif;
+
+    if ok;
+      text = IFS_read(utf8_path);
+      text_job = text;
+      ok = parse_envvar_report(text_job: env);
+      if not ok;
+        err = 'Unrecognised DSPJOB *ENVVAR report format for ' +
+              %trim(job_name);
+      endif;
+    endif;
+
+    IFS_remove_file(raw_path);
+    IFS_remove_file(utf8_path);
   endif;
 
-  // Unconditional, including on every failure path above: the spooled
-  // file is deleted and the override removal is attempted (best-effort).
-  IFS_remove_file(raw_path);
-  IFS_remove_file(utf8_path);
-  QCMD_exc('DLTSPLF FILE(QPDSPJOB) JOB(' + %trim(owner_job) +
-           ') SPLNBR(' + %char(file_number) + ')');
-  QCMD_exc('DLTOVR FILE(QPDSPJOB) LVL(*)');
+  // Every path from here on, success or failure: the spooled file (if
+  // one was created) is deleted and the override removed - both
+  // best-effort, not failures in their own right.
+  if have_splf;
+    QCMD_exc('DLTSPLF FILE(QPDSPJOB) JOB(' + %trim(owner_job) +
+             ') SPLNBR(' + %char(after.number) + ')');
+  endif;
+  QCMD_exc('DLTOVR FILE(QPDSPJOB) LVL(*JOB)');
 
   return ok;
 

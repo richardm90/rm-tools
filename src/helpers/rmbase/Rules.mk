@@ -30,7 +30,7 @@ RMIFS.MODULE: RMIFS.rpgle include/RMCOMP_H.rpgleinc include/RMTOOLS_H.rpgleinc \
     include/RMIFS_D.rpgleinc include/RMTOOLS_D.rpgleinc include/RMJOB_D.rpgleinc
 RMIFS.MODULE: private TEXT := rm-tools: IFS helper
 
-RMJOB.MODULE: RMJOB.sqlrpgle include/RMCOMP_H.rpgleinc include/RMTOOLS_H.rpgleinc \
+RMJOB.MODULE: RMJOB.rpgle include/RMCOMP_H.rpgleinc include/RMTOOLS_H.rpgleinc \
     include/PSDS_D.rpgleinc include/RMJOB_D.rpgleinc include/RMTOOLS_D.rpgleinc \
     include/RMQCMD_D.rpgleinc include/RMMSG_D.rpgleinc include/RMIFS_D.rpgleinc \
     include/RMPASE_D.rpgleinc include/RMSTRING_D.rpgleinc

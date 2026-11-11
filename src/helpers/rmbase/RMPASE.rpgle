@@ -67,6 +67,10 @@ dcl-proc PASE_run_cmd export;
   dcl-ds outrec len(132) end-ds;
   dcl-s errmsg varchar(80);
   dcl-s str like(STRING_t) ccsid(*utf8);
+  dcl-s saved_use_fd  like(ENVVAR_value_t);
+  dcl-s saved_pase_fd like(ENVVAR_value_t);
+  dcl-s had_use_fd    like(BOOLEAN_t) inz(false);
+  dcl-s had_pase_fd   like(BOOLEAN_t) inz(false);
 
   // Initialise output parameters
   rc = 0;
@@ -83,6 +87,15 @@ dcl-proc PASE_run_cmd export;
 
   // Unset environment variables, required by UNIXCMDOA
   // - if not set UNIXCMDOA sets accordingly
+  //
+  // Only for the child: the caller's own job-level values are saved here
+  // and put back as soon as the child has started (below). MEASURED: leaving
+  // QIBM_USE_DESCRIPTOR_STDIO deleted broke the CALLER's stdout - a
+  // program run from qsh whose C stdio first started after this call
+  // wrote nothing at all to stdout (6 of 6 runs), because without the
+  // variable ILE C no longer binds stdout to descriptor 1.
+  had_use_fd  = job_envvar('QIBM_USE_DESCRIPTOR_STDIO': saved_use_fd);
+  had_pase_fd = job_envvar('QIBM_PASE_DESCRIPTOR_STDIO': saved_pase_fd);
   ENVVAR_dlt('QIBM_USE_DESCRIPTOR_STDIO');
   ENVVAR_dlt('QIBM_PASE_DESCRIPTOR_STDIO');
 
@@ -98,8 +111,21 @@ dcl-proc PASE_run_cmd export;
   endif;
   sndmsg('RMPASE cmd: >' + %trimr(cmd) + '<');
 
-  // Open UNIX handler
-  open UNIX;
+  // Open UNIX handler - this spawns the child, which takes its copy of
+  // the environment there and then, so the caller's values go back
+  // straight after, whether or not the open worked. (Not ON-EXIT:
+  // RNF7179, ON-EXIT is not allowed in a procedure defining an
+  // Open Access file.)
+  monitor;
+    open UNIX;
+  on-error;
+    restore_job_envvar('QIBM_USE_DESCRIPTOR_STDIO': had_use_fd: saved_use_fd);
+    restore_job_envvar('QIBM_PASE_DESCRIPTOR_STDIO': had_pase_fd: saved_pase_fd);
+    sndmsg('RMPASE could not start the PASE command');
+    return -1;
+  endmon;
+  restore_job_envvar('QIBM_USE_DESCRIPTOR_STDIO': had_use_fd: saved_use_fd);
+  restore_job_envvar('QIBM_PASE_DESCRIPTOR_STDIO': had_pase_fd: saved_pase_fd);
 
   // Send standard input
   if %passed(stdin) and %len(stdin) > 0;
@@ -140,6 +166,53 @@ dcl-proc PASE_run_cmd export;
   endif;
 
   return rc;
+end-proc;
+
+///
+// Put back a job-level environment variable saved by job_envvar, if it
+// was set.
+///
+
+dcl-proc restore_job_envvar;
+  dcl-pi *n;
+    key   like(ENVVAR_key_t) const;
+    had   like(BOOLEAN_t) const;
+    value like(ENVVAR_value_t) const;
+  end-pi;
+
+  if had;
+    ENVVAR_put(key: value);
+  endif;
+end-proc;
+
+///
+// Whether a JOB-level environment variable is set, and its value.
+// ENVVAR_get is not used because it falls back to the system-level value,
+// which must not be copied into the job.
+///
+
+dcl-proc job_envvar;
+  dcl-pi *n like(BOOLEAN_t);
+    key   like(ENVVAR_key_t) const;
+    value like(ENVVAR_value_t);
+  end-pi;
+
+  dcl-pr qp0zgetenv pointer extproc('Qp0zGetEnv');
+    name  pointer value options(*string);
+    ccsid like(INTEGER_t);
+  end-pr;
+
+  dcl-s p     pointer;
+  dcl-s ccsid like(INTEGER_t);
+
+  value = '';
+  p = qp0zgetenv(%trimr(key): ccsid);
+  if p = *null;
+    return false;
+  endif;
+
+  value = %str(p);
+  return true;
 end-proc;
 
 ///
